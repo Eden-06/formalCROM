@@ -40,14 +40,14 @@ The repository contains three files, whereas:
 Make sure to have a compatible Python version installed.
 
 1. Clone the repository in to the desired folder.
-	```bash
-	git clone https://github.com/Eden-06/formalCROM.git
-	```
+    ```bash
+    git clone https://github.com/Eden-06/formalCROM.git
+    ```
 2. Create and validate the example.
-	```bash
-	python cromexample.py
-	```
-
+    ```bash
+    python cromexample.py
+    ```
+    
 ## Version
 
 1.0.0
