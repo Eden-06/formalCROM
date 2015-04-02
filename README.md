@@ -11,6 +11,17 @@ more importantly close to their formalization.
 
 * Python >= 2.7.3 (see [Python Installation](https://www.python.org/downloads/release/python-279/) for more Information.)
 
+## Structure of the Repository
+
+The repository contains three files, whereas:
+
+* **crom.py** contains the full reference implementation including classes,
+    such as *CROM*, *CROI*, *ConstraintModel*, and auxiliary functions
+* **cromtest.py** is a test suite build to test the implementation of all
+    the axioms with both positive and negative cases.
+* **cromexample.py** implements an example model with constraints, two of its instances,
+    and evaluates their well-formedness, compliance, and validity, respectively
+
 ## Reference Implementation
 
 The reference implementation is encapsulated in the **crom.py**
@@ -23,17 +34,6 @@ and contains the following classes:
 
 Please use this implementation, to apply, evaluate, and extend 
 our formal role-based modeling language.
-
-## Structure of the Repository
-
-The repository contains three files, whereas:
-
-* **crom.py** contains the full reference implementation including classes,
-    such as *CROM*, *CROI*, *ConstraintModel*, and auxiliary functions
-* **cromtest.py** is a test suite build to test the implementation of all
-    the axioms with both positive and negative cases.
-* **cromexample.py** implements an example model with constraints, two of its instances,
-    and evaluates their well-formedness, compliance, and validity, respectively
 
 ## Installation
 
