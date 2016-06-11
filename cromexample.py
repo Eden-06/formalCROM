@@ -50,10 +50,6 @@ print
 
 print "=== Constraint Model for the Bank ==="
 
-irreflexive=lambda r: not(any( x==y for x,y in r))
-
-inf=float("inf")
-
 c_bank=ConstraintModel( {"Bank": [ ( (1,inf),"Consultant"),((0,inf),bankaccounts) ],
                          "Transaction": [ ( (2,2),participants) ] }, #rolec
                         { "own_ca": ((1,1),(0,inf)),

@@ -23,6 +23,17 @@ def total_function(domain, foo):
 	f=set(iter(foo))
 	return d <= f
 
+
+def transitive_closure(a):
+	c = set(a)
+	while True:
+		n = set((x,z) for x,y in c for q,z in c if q == y)
+		cn = c | n
+		if cn == c:
+			break
+		c = cn
+	return c
+
 # Defintion of Compartment Role Object Models
 
 class CROM:
@@ -280,6 +291,16 @@ def evaluate(a,croi,o,c):
 			return 1
 		else:
 			return 0 
+
+#Definition of standard intra relationship constraints
+irreflexive=lambda r: not(any( x==y for x,y in r))
+reflexive=lambda r: all( (x,x) in r for x,y in r)
+acyclic=lambda r: not(any( x==y for x,y in transitive_closure(r) ))
+cyclic=lambda r: all( (x,x) in r for x,y in transitive_closure(r) )
+total=lambda r: False
+
+# Definition of the positive infinite
+inf=float("inf")
 
 class ConstraintModel:
 	'''
