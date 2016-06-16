@@ -313,6 +313,7 @@ class ConstraintModel:
 		self.rolec=dict(rolec)
 		self.card=dict(card)
 		self.intra=frozenset(intra)
+		#self.inter=frozenset(inter)
 		# assert total function
 		
 	def __str__(self):
@@ -325,7 +326,7 @@ class ConstraintModel:
 		'''
 		Returns true iff the ConstraintModel is compliant to the given CROM.
 		'''
-		return crom.wellformed() and self.axiom12(crom)
+		return crom.wellformed() and self.axiom12(crom) # and self.axiom13(crom)
 		
 	def axiom12(cm,crom):
 		'''
@@ -333,13 +334,28 @@ class ConstraintModel:
 		\\text{atoms}(a) \\subseteq \\text{parts}(ct)
 		'''
 		return all( atoms(a) <= set(crom.parts[ct]) for ct in crom.ct if ct in cm.rolec for crd,a in cm.rolec[ct] )
-		
+
+	def newaxiom13(cm,crom):
+		'''
+		\\forall (rst_1,c,rst_2) \in \\text{inter}\!:& rst_1 \\neq rst_2
+		'''
+		return all( rst1 != rest2 for rst1,c,rst2 in crom.inter)
+
+	def newaxiom14(cm,crom):
+		'''
+		\\forall (rst_1,_,rst_2) \in \\text{inter}\,& \exists! (rst_1,c,rst_2) \in \\text{inter}
+		'''
+		return all( len(set([c2 for rst3,c2,rst4 in crom.inter if rst1==rst3 and rst2==rst4]))==1 for rst1,c1,rst2 in crom.inter ) 
+	
 	def validity(self,crom,croi):
 		'''
 		Returns true iff the ConstraintModel is compliant to the given CROM and the given CROI is valid wrt. the ConstraintModel
 		'''
 		return self.compliant(crom) and croi.compliant(crom) and self.axiom13(crom,croi) and \
 		self.axiom14(crom,croi) and self.axiom15(crom,croi) and self.axiom16(crom,croi)
+		# return self.compliant(crom) and croi.compliant(crom) and self.axiom15(crom,croi) and \
+		# self.axiom16(crom,croi) and self.axiom17(crom,croi) and self.axiom18(crom,croi) and \
+		# self.axiom19(crom,croi) and self.axiom20(crom,croi)
 		
 	def axiom13(cm,crom,croi):
 		'''
@@ -374,4 +390,16 @@ class ConstraintModel:
 		\\forall c \\in C \\forall (rst,f) \\in intra:\\text{links}(rst,c) = \\emptyset\\ \\vee
 		f(\\overline{\\text{links}(rst,c)})=1
 		'''
-		return all( f( croi.overline_links(rst,c) )==1 for c in croi.c for rst,f in cm.intra if (rst,c) in croi.links) 	
+		return all( f( croi.overline_links(rst,c) )==1 for c in croi.c for rst,f in cm.intra if (rst,c) in croi.links)
+		
+	def newaxiom19(cm,crom,croi):
+		'''
+		\\forall c \in C &\ \\forall (rst_1,\otimes,rst_2) \in inter\!:  \\overline{\\text{links}(rst_1,c)} \\cap \\overline{\\text{links}(rst_2,c)} = \emptyset
+		'''
+		return all( len(croi.overline_links(rst1,c) & croi.overline_links(rst2,c))==0 for c in croi.c for rst1,e,rst2 in cm.inter if e==">-<")
+		
+	def newaxiom20(cm,crom,croi):
+		'''
+		\\forall c \in C &\ \\forall (rst_1,\\trianglelefteq,rst_2) \in inter\!: \\overline{\\text{links}(rst_1,c)} \\subseteq \\overline{\\text{links}(rst_2,c)}
+		'''
+		return all( croi.overline_links(rst1,c).issubset(croi.overline_links(rst2,c) ) for c in croi.c for rst1,i,rst2 in cm.inter if i=="-|>")
