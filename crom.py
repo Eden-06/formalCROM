@@ -1,6 +1,8 @@
 #!/usr/bin/env python
 # -*- coding: UTF-8 -*-
 
+import itertools
+
 """crom.py: Proof of concept implementation of the formal role-based modeling language CROM."""
 
 __author__ = "Thomas Kühn"
@@ -38,14 +40,16 @@ def transitive_closure(a):
 
 class CROM:
 	'''
-	Class representation of a Compartment Role Object Model (CROM).
+	Class representation of a Compartment Role Object Model with Inheritance (CROM\textsubscript{I}).
 	'''
   
-	def __init__(self,nt,rt,ct,rst,fills,parts,rel):
+	def __init__(self,nt,rt,ct,rst,fills,parts,rel,prec_nt,prec_ct):
 		'''
-		Creates a new CROM instances from the sets of naturel types,
-		role types, compartment types, relationship types, fulfillments,
-		as well as from the parts and relationship mappings.
+		Creates a new CROM with Inheritance instances from the sets of
+		naturel types, role types, compartment types, relationship types, 
+		fulfillments,	as well as from the parts and relationship mappings.
+		Moreover, \prec_{NT} and \prec_{CT} denote the inheritance relation
+		between natural types and role types.
 		'''
 		self.nt=frozenset(nt)
 		self.rt=frozenset(rt)
@@ -54,6 +58,10 @@ class CROM:
 		self.fills=frozenset(fills)
 		self.parts=dict(parts)
 		self.rel=dict(rel)
+		self.prec_nt=frozenset(prec_nt)
+		assert self.prec_nt <= set(itertools.product(self.nt,self.nt))
+		self.prec_ct=frozenset(prec_ct)
+		assert self.prec_ct <= set(itertools.product(self.ct,self.ct))
 		assert mutual_disjoint([self.nt,self.rt,self.ct,self.rst])
 		assert total_function(self.ct,self.parts)
 		assert total_function(self.rst,self.rel)
@@ -63,7 +71,25 @@ class CROM:
 		Returns a String representation of the CROM.
 		'''
 		return 'CROM({0},{1},{2},{3},{4},{5},{6})'.format(self.nt,self.rt,self.ct,self.rst,self.fills,self.rel,self.parts)
-		
+	
+	def preceq_nt(self):
+		'''
+		Transitive closure over the natural inheritance relation prec_nt.
+		'''
+		return frozenset(transitive_closure(self.prec_nt))
+	
+	def preceq_ct(self):
+		'''
+		Transitive closure over the compartment inheritance relation prec_ct.
+		'''
+		return frozenset(transitive_closure(self.prec_ct))
+
+	def preceq_t(self):
+		'''
+		Transitive closure over the natural and the compartment inheritance relation.
+		'''
+		return frozenset(transitive_closure(self.prec_nt | self.prec_ct))
+	
 	def wellformed(self):
 		'''
 		Returns true iff CROM is well-formed. 
