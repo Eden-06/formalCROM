@@ -297,7 +297,7 @@ irreflexive=lambda r: not(any( x==y for x,y in r))
 reflexive=lambda r: all( (x,x) in r for x,y in r)
 acyclic=lambda r: not(any( x==y for x,y in transitive_closure(r) ))
 cyclic=lambda r: all( (x,x) in r for x,y in transitive_closure(r) )
-total=lambda r: False
+total=lambda r: all( (a!=y and b!=x) for a,b in r for x,y in r ) 
 
 # Definition of the positive infinite
 inf=float("inf")
