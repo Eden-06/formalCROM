@@ -1,6 +1,8 @@
 #!/usr/bin/env python
 # -*- coding: UTF-8 -*-
 
+import itertools
+
 """crom.py: Proof of concept implementation of the formal role-based modeling language CROM."""
 
 __author__ = "Thomas Kühn"
@@ -38,32 +40,57 @@ def transitive_closure(a):
 
 class CROM:
 	'''
-	Class representation of a Compartment Role Object Model (CROM).
+	Class representation of a Compartment Role Object Model with Inheritance (CROM\textsubscript{I}).
+	\\mathcal{N}=(NT, RT, CT, RST, F, M, \\text{fills}, \\text{rel}, \\text{fields}, \\text{methods}, \\prec_{NT}, \\prec_{CT} )
 	'''
   
-	def __init__(self,nt,rt,ct,rst,fills,parts,rel):
+	def __init__(self,nt,rt,ct,rst,fills,rel,prec_nt,prec_ct):
 		'''
-		Creates a new CROM instances from the sets of naturel types,
-		role types, compartment types, relationship types, fulfillments,
-		as well as from the parts and relationship mappings.
+		Creates a new CROM with Inheritance instances from the sets of
+		naturel types, role types, compartment types, relationship types, 
+		fulfillments	as well as relationship mappings.
+		Moreover, \prec_{NT} and \prec_{CT} denote the inheritance relation
+		between natural types and role types.
 		'''
 		self.nt=frozenset(nt)
 		self.rt=frozenset(rt)
 		self.ct=frozenset(ct)
 		self.rst=frozenset(rst)
 		self.fills=frozenset(fills)
-		self.parts=dict(parts)
+		assert self.fills <= set(itertools.product((self.nt | self.ct),self.ct,self.rt))
 		self.rel=dict(rel)
+		assert set(self.rel.iterkeys()) <= set(itertools.product(self.rst,self.ct))
+		assert set(self.rel.itervalues()) <= set(itertools.product(self.rt,self.rt))
+		self.prec_nt=frozenset(prec_nt)
+		assert self.prec_nt <= set(itertools.product(self.nt,self.nt))
+		self.prec_ct=frozenset(prec_ct)
+		assert self.prec_ct <= set(itertools.product(self.ct,self.ct))
 		assert mutual_disjoint([self.nt,self.rt,self.ct,self.rst])
-		assert total_function(self.ct,self.parts)
-		assert total_function(self.rst,self.rel)
 		
 	def __str__(self):
 		'''
 		Returns a String representation of the CROM.
 		'''
-		return 'CROM({0},{1},{2},{3},{4},{5},{6})'.format(self.nt,self.rt,self.ct,self.rst,self.fills,self.rel,self.parts)
-		
+		return 'CROM({0},{1},{2},{3},{4},{5},{6},{7})'.format(self.nt,self.rt,self.ct,self.rst,self.fills,self.rel,self.prec_nt,self.prec_ct)
+	
+	def preceq_nt(self):
+		'''
+		Reflexive transitive closure over the natural inheritance relation prec_nt.
+		'''
+		return transitive_closure(self.prec_nt) | set([(nt,nt) for nt in self.nt])
+	
+	def preceq_ct(self):
+		'''
+		Reflexive Transitive closure over the compartment inheritance relation prec_ct.
+		'''
+		return transitive_closure(self.prec_ct) | set([(ct,ct) for ct in self.ct])
+
+	def preceq_t(self):
+		'''
+		Reflexive transitive closure over the natural and the compartment inheritance relation.
+		'''
+		return self.preceq_nt() | self.preceq_ct()
+	
 	def wellformed(self):
 		'''
 		Returns true iff CROM is well-formed. 
@@ -73,36 +100,47 @@ class CROM:
 		
 	def axiom1(crom):
 		'''
-		\\forall rt \\in RT \\exists t \\in (NT \\cup CT) : (t,rt) \\in \\text{fills}
+		\\forall rt \\in RT \\exists ct \\in CT\\!: \\ (\\_,ct,rt) \\in \\text{fills}
 		'''
-		return all( any( (t,rt) in crom.fills for t in (crom.nt | crom.ct) ) for rt in crom.rt)
-		
+		return all( any( (t,ct,rt) in crom.fills for t in (crom.nt | crom.ct) for ct in crom.ct) for rt in crom.rt)
+	
 	def axiom2(crom):
 		'''
-		\\forall ct \in CT : \\text{parts}(ct) \\neq \\emptyset
+		\\forall ct \\in CT \\exists rt \\in RT\\!: \\ (\\_,ct,rt) \\in \\text{fills}
 		'''
-		return all( len(crom.parts[ct])>0 for ct in crom.ct ) 
+		return all( any( (t,ct,rt) in crom.fills for t in (crom.nt | crom.ct) for rt in crom.rt) for ct in crom.ct)
 		
 	def axiom3(crom):
 		'''
-		\\forall rt \\in RT \\exists ! ct \\in CT : rt \\in \\text{parts}(ct)
+		\\forall (rt_1,rt_2) \\in \\mathbf{codomain}(\\text{rel})\\!: rt_1 \\neq rt_2
 		'''
-		return all( len( [True for ct in crom.ct if rt in crom.parts[ct]] )==1 for rt in crom.rt ) 
+		return all( rt_1 != rt_2 for (rt_1,rt_2) in crom.rel.itervalues() ) 
 		
 	def axiom4(crom):
 		'''
-		\\forall rst \\in RST \\text{rel}(rst) = (rt_1,rt_2) \\wedge rt_1 \\neq rt_2
+		\\forall (rst,ct) \\in \\mathbf{domain}(\\text{rel})\\!:
+		\\text{rel}(rst,ct) = (rt_1,rt_2)\\ \\wedge (\\_,ct,rt_1),(\\_,ct,rt_2) \\in \\text{fills}
 		'''
-		return all( crom.rel[rst][0]!=crom.rel[rst][1] for rst in crom.rst )
+		return all( any( (t,ct,rt) in crom.fills for t in (crom.nt|crom.ct) ) \
+		for (rst,ct) in crom.rel.iterkeys() for rt in crom.rel[(rst,ct)] ) 
 		
 	def axiom5(crom):
 		'''
-		\\forall rst \\in RST \\exists ct \\in CT : \\text{rel}(rst) = (rt_1,rt_2) \\wedge  rt_1,rt_2 \\in \\text{parts}(ct)
+		\\forall (ct_1,ct_2) \\in \\preceq_{CT} \\forall (t,ct_2,rt) \\in \\text{fills}
+		\\exists (s,ct_1,rt) \\in \\text{fills}\\! : s \\preceq_{T} t
 		'''
-		return all( any(set(crom.rel[rst]) <= set(crom.parts[ct]) for ct in crom.ct) for rst in crom.rst)
+		return all( any( (s,t) in crom.preceq_t() for (s,c,rt_1) in crom.fills if ct_1==c and rt_1==rt_2) \
+		for (ct_1,ct_2) in crom.preceq_ct() for (t,d,rt_2) in crom.fills if ct_2==d )
+		
+	def axiom6(crom):
+		'''
+		\\forall (ct_1,ct_2) \\in \\preceq_{CT} \\forall (rst,ct_2) \\in \\mathbf{domain}(\\text{rel}) :
+		(rst,ct_1) \\in \\mathbf{domain}(\\text{rel}) \\wedge \\text{rel}(rst,ct_2)=\\text{rel}(rst,ct_1)
+		'''
+		return all( (rst,ct_1) in set(crom.rel.iterkeys()) and crom.rel[(rst,ct_2)]==crom.rel[(rst,ct_1)] \
+		for (ct_1,ct_2) in crom.preceq_ct() for (rst,d) in crom.rel.iterkeys() if ct_2==d )
 
 # Defintion of Compartment Role Object Instances
-
 
 class CROI:
 	'''
