@@ -146,6 +146,8 @@ test18b=CROI([1,5,0],[2,3,7],[4],{1:1,0:1,2:2,3:3,7:2,4:4,5:1},[(1,4,2),(5,4,3),
 test19=CROI([1,5,6],[2,3,7,8],[4],{1:1,5:1,6:1,2:2,3:3,7:2,8:3,4:4},[(1,4,2),(5,4,3),(5,4,7),(6,4,8)],{('a',4):[(2,3),(7,8)]} )
 test20=CROI([1,5,6,9],[2,3,7,8],[4],{1:1,5:1,6:1,9:1,2:2,3:3,7:2,8:3,4:4},[(1,4,2),(5,4,3),(6,4,7),(9,4,8)],{('a',4):[(2,3),(7,8)]} )
 
+# TODO: Test for inter-relationship constraint issue with links(rst1,c)={(n1,n2)} and links(rst2,c)={(n1,None),(None,n2)} with constrain rst1 
+
 valtests=[ (test0,testcm0,test8,False, True, True, True, True),
            (test0,testcm0,test8b,True, True, True, True, True),
            (test1,testcm0,test8,True, True, True, True, True), 

@@ -3,7 +3,7 @@
 
 import itertools
 
-"""crom.py: Proof of concept implementation of the formal role-based modeling language CROM."""
+"""crom.py: Proof of concept implementation of the formal role-based modeling language CROM with Inheritance."""
 
 __author__ = "Thomas Kühn"
 __copyright__ = "Copyright 2014"
@@ -36,12 +36,12 @@ def transitive_closure(a):
 		c = cn
 	return c
 
-# Defintion of Compartment Role Object Models
+# Defintion of Compartment Role Object Models with Inheritance
 
 class CROM:
 	'''
 	Class representation of a Compartment Role Object Model with Inheritance (CROM\textsubscript{I}).
-	\\mathcal{N}=(NT, RT, CT, RST, F, M, \\text{fills}, \\text{rel}, \\text{fields}, \\text{methods}, \\prec_{NT}, \\prec_{CT} )
+	\\mathcal{N}=(NT, RT, CT, RST, F, M, \\text{fills}, \\text{rel}, \\prec_{NT}, \\prec_{CT} )
 	'''
   
 	def __init__(self,nt,rt,ct,rst,fills,rel,prec_nt,prec_ct):
@@ -57,13 +57,13 @@ class CROM:
 		self.ct=frozenset(ct)
 		self.rst=frozenset(rst)
 		self.fills=frozenset(fills)
-		assert self.fills <= set(itertools.product((self.nt | self.ct),self.ct,self.rt))
 		self.rel=dict(rel)
+		self.prec_nt=frozenset(prec_nt)		
+		self.prec_ct=frozenset(prec_ct)
+		assert self.fills <= set(itertools.product((self.nt | self.ct),self.ct,self.rt))
 		assert set(self.rel.iterkeys()) <= set(itertools.product(self.rst,self.ct))
 		assert set(self.rel.itervalues()) <= set(itertools.product(self.rt,self.rt))
-		self.prec_nt=frozenset(prec_nt)
 		assert self.prec_nt <= set(itertools.product(self.nt,self.nt))
-		self.prec_ct=frozenset(prec_ct)
 		assert self.prec_ct <= set(itertools.product(self.ct,self.ct))
 		assert mutual_disjoint([self.nt,self.rt,self.ct,self.rst])
 		
@@ -91,12 +91,24 @@ class CROM:
 		'''
 		return self.preceq_nt() | self.preceq_ct()
 	
+	def welldefined(self):
+		'''
+		Returns true iff the CROM definition is faith full to the formal model, 
+		i.e., whether all sets, relations, and functions have the correct mathematical properties.
+		'''
+		return	self.fills <= set(itertools.product((self.nt | self.ct),self.ct,self.rt)) and \
+		set(self.rel.iterkeys()) <= set(itertools.product(self.rst,self.ct)) and \
+		set(self.rel.itervalues()) <= set(itertools.product(self.rt,self.rt)) and \
+		self.prec_nt <= set(itertools.product(self.nt,self.nt)) and \
+		self.prec_ct <= set(itertools.product(self.ct,self.ct)) and \
+		mutual_disjoint([self.nt,self.rt,self.ct,self.rst])
+	
 	def wellformed(self):
 		'''
 		Returns true iff CROM is well-formed. 
 		'''
-		return self.axiom1() and self.axiom2() and self.axiom3() and \
-		self.axiom4() and self.axiom5()
+		return self.welldefined() and self.axiom1() and self.axiom2() and \
+		self.axiom3() and self.axiom4() and self.axiom5() and self.axiom6()
 		
 	def axiom1(crom):
 		'''
@@ -158,53 +170,63 @@ class CROI:
 		self.type1=dict(type1)
 		self.plays=set(plays)
 		self.links=dict(links)
-		assert mutual_disjoint([self.n,self.r,self.c,set([None])])
-		assert total_function(self.n | self.r | self.c,self.type1)
-		# assert total_function(???,self.links)
+
 		
 	def __str__(self):
 		'''
 		Returns a String representation of the CROI.
 		'''
 		return "CROI({0},{1},{2},{3},{4},{5})".format(self.n,self.r,self.c,self.type1,self.plays,self.links)
-		
+	
+	def welldefined(self,crom):
+		'''
+		Returns true iff the CROI definition is faith full to the formal model wrt. to a given CROM model, 
+		i.e., whether all sets, relations, and functions have the correct mathematical properties.
+		'''
+		return mutual_disjoint([self.n,self.r,self.c,set([None])]) and \
+		self.plays <= set(itertools.product((self.n | self.c),self.c,self.r)) and \
+		total_function(self.n | self.r | self.c,self.type1) and \
+		totol_function(itertools.product(crom.rst,self.c),self.links)
+	
 	def compliant(self,crom):
 		'''
 		Returns true iff the CROI is compliant to the given CROM.
 		'''
-		return crom.wellformed() and self.axiom6(crom) and self.axiom7(crom) and \
-		self.axiom8(crom) and self.axiom9(crom) and self.axiom10(crom) and self.axiom11(crom)
-		
-	def axiom6(croi,crom):
-		'''
-		\\forall (o,c,r) \\in \\text{plays} : 
-		(\\text{type}(o),\\text{type}(r)) \\in \\text{fills} \\wedge
-		\\text{type}(r) \\in \\text{parts}(\\text{type}(c))
-		'''
-		return all(((croi.type1[o],croi.type1[r]) in crom.fills) and (croi.type1[r] in crom.parts[croi.type1[c]]) for o,c,r in croi.plays)
+		return crom.wellformed(crom) and self.welldefined() and self.axiom6(crom) and \
+		self.axiom7(crom) and self.axiom8(crom) and self.axiom9(crom) and \
+		self.axiom10(crom) and self.axiom11(crom)
 		
 	def axiom7(croi,crom):
+		'''
+		\\forall (o,c,r) \\in \\text{plays} 
+		\\exists (t,\\text{type}(c),\\text{type}(r)) \\in \\text{fills}: 
+		\\text{type}(o) \\preceq_{T} t
+		'''
+		#return all(any( croi.type1[o] ... for (t,ct,rt) in crom.fills) for (o,c,r) in croi.plays)
+		return all(((croi.type1[o],croi.type1[r]) in crom.fills) and (croi.type1[r] in crom.parts[croi.type1[c]]) for o,c,r in croi.plays)
+		
+	def axiom8(croi,crom):
 		'''
 		\forall (o,c,r), (o,c,r') \\in \\text{plays} :
 		r \\neq r' \\Rightarrow \\text{type}(r) \\neq \\text{type}(r')
 		'''
 		return all(croi.type1[r_1]!=croi.type1[r] for o_1,c_1,r_1 in croi.plays for o,c,r in croi.plays if o_1==o and c_1==c and r_1!=r)
 		
-	def axiom8(croi,crom):
+	def axiom9(croi,crom):
 		'''
 		\\forall r \in R \\exists ! o \\in O \\exists ! c \\in C : 
 		(o,c,r) \\in \\text{plays}
 		'''
 		return all( len(set([(o,c) for o,c,r_1 in croi.plays if r_1==r]))==1 for r in croi.r )
 		
-	def axiom9(croi,crom):
+	def axiom10(croi,crom):
 		'''
 		\\forall rst \\in RST \\forall c \in C :
 		(\\varepsilon,\\varepsilon) \\not\\in \\text{links}(rst,c)
 		'''
 		return all( (None,None) not in croi.links[(rst,c)] for rst in crom.rst for c in croi.c if (rst,c) in croi.links)
 		
-	def axiom10(croi,crom):
+	def axiom11(croi,crom):
 		'''
 		\\forall rst \\in RST \\forall c \\in C \\forall r \\in R\\ \\forall o \\in O \\exists \\hat{r} \\in R^{\\varepsilon}:
 		\\text{rel}(rst) = (rt_{1},rt_{2})\\ \\wedge
@@ -215,7 +237,7 @@ class CROI:
 		'''
 		return all( any((((o,c,r) in croi.plays and croi.type1[r]==crom.rel[rst][0]) == bool((r,r_1) in croi.links[(rst,c)])) and (((o,c,r) in croi.plays and croi.type1[r]==crom.rel[rst][1]) == bool((r_1,r) in croi.links[(rst,c)]) ) for r_1 in croi.repsilon() ) for rst in crom.rst for c in croi.c if (rst,c) in croi.links for r in croi.r for o in croi.o())
 
-	def axiom11(croi,crom):
+	def axiom12(croi,crom):
 		'''
 		\\forall rst \\in RST \\forall c \\in C \\forall (r_1,r_2) \\in \\text{links}(rst,c) \\cap R \\times R :
 (r_1,\\varepsilon), (\\varepsilon,r_2) \\notin \\text{links}(rst,c)

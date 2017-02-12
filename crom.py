@@ -1,12 +1,14 @@
 #!/usr/bin/env python
 # -*- coding: UTF-8 -*-
 
+import itertools
+
 """crom.py: Proof of concept implementation of the formal role-based modeling language CROM."""
 
 __author__ = "Thomas Kühn"
 __copyright__ = "Copyright 2014"
 __license__ = "MIT"
-__version__ = "1.0.0"
+__version__ = "1.0.2"
 
 # Basic Defintions
 
@@ -41,28 +43,26 @@ class CROM:
 	Class representation of a Compartment Role Object Model (CROM).
 	'''
   
-	def __init__(self,nt,rt,ct,rst,fills,parts,rel):
+	def __init__(self,nt,rt,ct,rst,fills,rel):
 		'''
-		Creates a new CROM instances from the sets of naturel types,
-		role types, compartment types, relationship types, fulfillments,
-		as well as from the parts and relationship mappings.
+		Creates a new CROM instances from the sets of naturel types, role types, compartment types, relationship types, fulfillments, and relationship mappings.
 		'''
 		self.nt=frozenset(nt)
 		self.rt=frozenset(rt)
 		self.ct=frozenset(ct)
 		self.rst=frozenset(rst)
 		self.fills=frozenset(fills)
-		self.parts=dict(parts)
 		self.rel=dict(rel)
 		assert mutual_disjoint([self.nt,self.rt,self.ct,self.rst])
-		assert total_function(self.ct,self.parts)
-		assert total_function(self.rst,self.rel)
+		assert self.fills <= set(itertools.product((self.nt | self.ct),self.ct,self.rt))
+		assert set(self.rel.iterkeys()) <= set(itertools.product(self.rst,self.ct))
+		assert set(self.rel.itervalues()) <= set(itertools.product(self.rt,self.rt))
 		
 	def __str__(self):
 		'''
 		Returns a String representation of the CROM.
 		'''
-		return 'CROM({0},{1},{2},{3},{4},{5},{6})'.format(self.nt,self.rt,self.ct,self.rst,self.fills,self.rel,self.parts)
+		return 'CROM({0},{1},{2},{3},{4},{5})'.format(self.nt,self.rt,self.ct,self.rst,self.fills,self.rel)
 		
 	def wellformed(self):
 		'''
@@ -73,36 +73,38 @@ class CROM:
 		
 	def axiom1(crom):
 		'''
-		\\forall rt \\in RT \\exists t \\in (NT \\cup CT) : (t,rt) \\in \\text{fills}
+		\\forall rt \\in RT \\exists! ct \\in CT \\exists t \\in (NT \\cup CT) : (t,ct,rt) \\in \\text{fills}
 		'''
-		return all( any( (t,rt) in crom.fills for t in (crom.nt | crom.ct) ) for rt in crom.rt)
+		return all( len( set([ ct for ct in crom.ct for t in (crom.nt | crom.ct) if (t,ct,rt) in crom.fills ]) )==1 for rt in crom.rt)
 		
 	def axiom2(crom):
 		'''
-		\\forall ct \in CT : \\text{parts}(ct) \\neq \\emptyset
+		\\forall ct \\in CT \\exists (t,ct,rt) \\in \\text{fills}
 		'''
-		return all( len(crom.parts[ct])>0 for ct in crom.ct ) 
+		return all( any( f[1]==ct for f in crom.fills )  for ct in crom.ct ) 
 		
 	def axiom3(crom):
 		'''
-		\\forall rt \\in RT \\exists ! ct \\in CT : rt \\in \\text{parts}(ct)
+		\\forall rst \\in RST \\exists ct \\in CT : (rst,ct) \\in \textbf{domain}(rel)
 		'''
-		return all( len( [True for ct in crom.ct if rt in crom.parts[ct]] )==1 for rt in crom.rt ) 
+		return all( any( (rst,ct) in crom.rel.keys() for ct in crom.ct ) for rst in crom.rst ) 
 		
 	def axiom4(crom):
 		'''
-		\\forall rst \\in RST \\text{rel}(rst) = (rt_1,rt_2) \\wedge rt_1 \\neq rt_2
+		\\forall (rt_1,rt_2) \\in \\mathbf{codomain}(\\text{rel})\\!: rt_1 \\neq rt_2
 		'''
-		return all( crom.rel[rst][0]!=crom.rel[rst][1] for rst in crom.rst )
+		return all( rt_1 != rt_2 for (rt_1,rt_2) in crom.rel.values() ) 
 		
 	def axiom5(crom):
 		'''
-		\\forall rst \\in RST \\exists ct \\in CT : \\text{rel}(rst) = (rt_1,rt_2) \\wedge  rt_1,rt_2 \\in \\text{parts}(ct)
+		\\forall (rst,ct) \\in \\mathbf{domain}(\\text{rel}) :
+		\\text{rel}(rst,ct) = (rt_1,rt_2)\\ \\wedge (\\_,ct,rt_1),(\\_,ct,rt_2) \\in \\text{fills}
 		'''
-		return all( any(set(crom.rel[rst]) <= set(crom.parts[ct]) for ct in crom.ct) for rst in crom.rst)
-
-# Defintion of Compartment Role Object Instances
-
+		return all( any( (t,ct,rt) in crom.fills for t in (crom.nt|crom.ct) ) \
+		for (rst,ct) in crom.rel.keys() for rt in crom.rel[(rst,ct)] ) 
+		
+	def parts(self,ct):
+		return set( rt for (t,ct_1,rt) in self.fills if ct_1==ct )
 
 class CROI:
 	'''
@@ -112,7 +114,7 @@ class CROI:
 	def __init__(self,n,r,c,type1,plays,links):
 		'''
 		Creates a new CROI from the given sets of naturals, roles, compartments;
-		the type mapping; the plays-relation; and links-funktion.
+		the type mapping; the plays-relation; and links-function.
 		'''
 		self.n=set(n)
 		self.r=set(r)
@@ -120,9 +122,11 @@ class CROI:
 		self.type1=dict(type1)
 		self.plays=set(plays)
 		self.links=dict(links)
-		assert mutual_disjoint([self.n,self.r,self.c,set([None])])
+		assert mutual_disjoint([self.n,self.r,self.c])
 		assert total_function(self.n | self.r | self.c,self.type1)
-		# assert total_function(???,self.links)
+		assert self.plays <= set(itertools.product((self.n | self.c),self.c,self.r))
+		# assert set(self.links.keys()) <= set(itertools.product(self.rst,self.c)) # rst unavailable
+		# assert set(self.links.values()) <= set(powerset(itertools.product(self.r,self.r))) #  powerset not scalable
 		
 	def __str__(self):
 		'''
@@ -135,15 +139,13 @@ class CROI:
 		Returns true iff the CROI is compliant to the given CROM.
 		'''
 		return crom.wellformed() and self.axiom6(crom) and self.axiom7(crom) and \
-		self.axiom8(crom) and self.axiom9(crom) and self.axiom10(crom) and self.axiom11(crom)
+		self.axiom8(crom) and self.axiom9(crom)
 		
 	def axiom6(croi,crom):
 		'''
-		\\forall (o,c,r) \\in \\text{plays} : 
-		(\\text{type}(o),\\text{type}(r)) \\in \\text{fills} \\wedge
-		\\text{type}(r) \\in \\text{parts}(\\text{type}(c))
+		\\forall (o,c,r) \\in \\text{plays} : (\\text{type}(o),\\text{type}(c),\\text{type}(r)) \\in \\text{fills}
 		'''
-		return all(((croi.type1[o],croi.type1[r]) in crom.fills) and (croi.type1[r] in crom.parts[croi.type1[c]]) for o,c,r in croi.plays)
+		return all( (croi.type1[o],croi.type1[c],croi.type1[r]) in crom.fills for o,c,r in croi.plays)
 		
 	def axiom7(croi,crom):
 		'''
@@ -154,35 +156,23 @@ class CROI:
 		
 	def axiom8(croi,crom):
 		'''
-		\\forall r \in R \\exists ! o \\in O \\exists ! c \\in C : 
-		(o,c,r) \\in \\text{plays}
+		\\forall r \in R \\exists ! o \\in O \\exists ! c \\in C : (o,c,r) \\in \\text{plays}
 		'''
 		return all( len(set([(o,c) for o,c,r_1 in croi.plays if r_1==r]))==1 for r in croi.r )
 		
 	def axiom9(croi,crom):
 		'''
-		\\forall rst \\in RST \\forall c \in C :
-		(\\varepsilon,\\varepsilon) \\not\\in \\text{links}(rst,c)
+		\\forall rst \\in RST \\forall c \in C \\forall (r_1,r_2) \\in \\text{links}(rst,c) :
+		(rst,\\text{type}(c)) \\in \\mathbf{domain} \\wedge
+		(_,c,r_1), (_,c,r_2) \\in \\text{plays} \\wedge
+		\\text{rel}(rst,\\text{type}(c))=(\\text{type}(r_1),\\text{type}(r_2))
 		'''
-		return all( (None,None) not in croi.links[(rst,c)] for rst in crom.rst for c in croi.c if (rst,c) in croi.links)
-		
-	def axiom10(croi,crom):
-		'''
-		\\forall rst \\in RST \\forall c \\in C \\forall r \\in R\\ \\forall o \\in O \\exists \\hat{r} \\in R^{\\varepsilon}:
-		\\text{rel}(rst) = (rt_{1},rt_{2})\\ \\wedge
-    \\big((o,c,r) \\in \\text{plays} \\land \\text{type}(r)=rt_{1}\\big)
-		\\Leftrightarrow \\big( (r,\\hat{r}) \\in \\text{links}(rst,c)\\big)\\ \\wedge
-		\\big((o,c,r) \\in \\text{plays} \\land \\text{type}(r)=rt_{2}\\big)
-		\\ \\Leftrightarrow \\big( (\\hat{r},r) \\in \\text{links}(rst,c)\\big)
-		'''
-		return all( any((((o,c,r) in croi.plays and croi.type1[r]==crom.rel[rst][0]) == bool((r,r_1) in croi.links[(rst,c)])) and (((o,c,r) in croi.plays and croi.type1[r]==crom.rel[rst][1]) == bool((r_1,r) in croi.links[(rst,c)]) ) for r_1 in croi.repsilon() ) for rst in crom.rst for c in croi.c if (rst,c) in croi.links for r in croi.r for o in croi.o())
-
-	def axiom11(croi,crom):
-		'''
-		\\forall rst \\in RST \\forall c \\in C \\forall (r_1,r_2) \\in \\text{links}(rst,c) \\cap R \\times R :
-(r_1,\\varepsilon), (\\varepsilon,r_2) \\notin \\text{links}(rst,c)
-		'''
-		return all(((r_1,None) not in croi.links[(rst,c)]) and ((None,r_2) not in croi.links[(rst,c)]) for rst in crom.rst for c in croi.c if (rst,c) in croi.links for r_1,r_2 in croi.links[(rst,c)] if r_1 != None and r_2 != None)
+		return all( (rst,croi.type1[c]) in crom.rel.keys() and \
+		crom.rel[(rst,croi.type1[c])] == (croi.type1[r_1],croi.type1[r_2]) and \
+		any( (o,c,r_1) in croi.plays for o in croi.o() ) and \
+		any( (o,c,r_2) in croi.plays for o in croi.o() )
+		for rst in crom.rst for c in croi.c if (rst,croi.type1[c]) in croi.links \
+		for (r_1,r_2) in croi.links[(rst,croi.type1[c])] )
 	
 	def o(self):
 		'''
@@ -190,21 +180,21 @@ class CROI:
 		'''
 		return self.n | self.c
 		
+	def C_ct(self,ct):
+		'''
+		Returns the compartments instances of the given type
+		'''
+		return set(c for c in self.c if self.type1[c]==ct)
+		
 	def o_c(self,c):
 		'''
 		O^c \\coloneqq \\{ o \\in O \\mid \\exists r \\in R : (o,c,r) \\in \\text{plays} \\}
 		'''
 		return [ o for o,c_1,r in self.plays if c_1==c ]
 		
-	def	repsilon(self):
-		'''
-		Returns the set of roles extended by the None object (\\varepsilon).
-		'''
-		return self.r | set([None])
-
 	def pred(self,rst,c,r):
 		'''
-		\\text{pred}(rst,c,r) \\coloneqq & \\{ r' \\mid (r',r) \\in \\text{links}(\\text{rst},c) \\wedge r' \\neq \\varepsilon \\}
+		\\text{pred}(rst,c,r) \\coloneqq & \\{ r' \\mid (r',r) \\in \\text{links}(\\text{rst},c) \\}
 		'''
 		if (rst,c) in self.links:
 			return [ r_1 for r_1,r_2 in self.links[(rst,c)] if r_2 == r ]
@@ -213,7 +203,7 @@ class CROI:
 
 	def succ(self,rst,c,r):
 		'''
-		\\text{succ}(rst,c,r) \\coloneqq & \\{ r' \\mid (r,r') \\in \\text{links}(\\text{rst},c) \\wedge r' \\neq \\varepsilon \\}
+		\\text{succ}(rst,c,r) \\coloneqq & \\{ r' \\mid (r,r') \\in \\text{links}(\\text{rst},c) \\}
 		'''
 		if (rst,c) in self.links:
 			return [ r_2 for r_1,r_2 in self.links[(rst,c)] if r_1 == r ]
@@ -224,8 +214,6 @@ class CROI:
 		'''
 		Returns the player of a given role or None if None is given.
 		'''
-		if r==None:
-			return None
 		for o,c,r_1 in croi.plays:
 			if r_1==r:
 				return o
@@ -235,7 +223,7 @@ class CROI:
 		'''
 		\\overline{\\text{links}(rst,c)} \\coloneqq & \\{ (\\overline{r_1},\\overline{r_1}) \\mid (r_1,r_2) \\in \\text{links}(rst,c) \\}
 		'''
-		return set([ (croi.player(r_1),croi.player(r_2)) for r_1,r_2 in croi.links[(rst,c)] ])
+		return set( (croi.player(r_1),croi.player(r_2)) for r_1,r_2 in croi.links[(rst,c)] )
 
 # Defintion of Role Group
 
@@ -290,15 +278,96 @@ def evaluate(a,croi,o,c):
 		if any( (o,c,r) in croi.plays for r in croi.r if croi.type1[r]==a ):
 			return 1
 		else:
-			return 0 
+			return 0
+
+
+class QuantifiedRoleGroup:
+	'''
+	Class representation of Role Groups.
+	'''
+	def __init(self):
+		pass
+		
+class QuantifiedGroup(QuantifiedRoleGroup):
+	def __init__(self,qrgs,lower,upper):
+		'''
+		Creates a new QuantifiedRoleGroup from the given set as well as the lower and upper bound.
+		'''
+		super(QuantifiedGroup, self).__init__()
+		self.qrgs = frozenset(qrgs)
+		self.lower = int(lower)
+		self.upper = int(upper)
+		if not (0 <= lower <= upper):
+			raise ValueError("lower must be less or equal to upper")
+			
+	def __str__(self):
+		'''
+		Returns a String representation of the RoleGroup.
+		'''
+		return "QuantifiedGroup({0},{1},{2})".format(self.rolegroups,self.lower,self.upper)
+		
+		
+class Quantification(QuantifiedRoleGroup):
+	def __init__(self,ct,lower,upper,rolegroup):
+		'''
+		Creates a new QuantifiedRoleGroup from the given set as well as the lower and upper bound.
+		'''
+		super(Quantification, self).__init__()
+		self.ct=ct
+		self.lower = int(lower)
+		self.upper = int(upper)
+		self.rolegroup = RoleGroup(rolegroup.rolegroups,rolegroup.lower,rolegroup.upper)
+		if not (0 <= lower <= upper):
+			raise ValueError("lower must be less or equal to upper")
+			
+	def __str__(self):
+		'''
+		Returns a String representation of the RoleGroup.
+		'''
+		return "Quantification({0},{1},{2},{3})".format(self.ct,self.lower,self.upper,self.rolegroup)
+			
+def unbound(crom,a):
+	'''
+	Recursively, collects the role types not contained in the quantified compartment types.
+	'''
+	if isinstance(a,QuantifiedGroup):
+	  return set([ unbound(crom,b) for b in a.qrgs])
+	elif isinstance(a,Quantification):
+	  return atoms(a) - crom.parts(ct)
+	else:
+		raise ValueError("Given object was neither a QuantifiedGroup nor a Quantification: "+string(a))
+
+# Semantics of Quantified Role Groups
+
+def evaluateQ(a,croi,o):
+	'''
+	a^{\\I^c_o} \\coloneqq
+  \\begin{cases}
+	1 & \\text{\\textbf{if}}\\ a \\equiv Q(ct,n,m).b \\wedge n \\leq \\sum\\nolimits_{c \\in C_{ct}}{b^{\\I^c_o}} \\leq m
+		& \\text{\\textbf{or}} \\quad a \\equiv (B,n,m) \\wedge n \\leq \\sum\\nolimits_{b \\in B}{b^{\\I_o}} \\leq m\\\\
+	0 & \\text{\\textbf{otherwise}}
+	\\end{cases}	
+	'''
+	if isinstance(a,QuantifiedGroup):
+		if (a.lower <= sum( evaluateQ(b,croi,o) for b in a.rolegroups ) <= a.upper):
+			return 1
+		else:
+			return 0
+	elif isinstance(a,Quantification):
+		if (a.lower <= sum( evaluate(a.rolegroup,croi,o,c) for c in croi.C_ct(a.ct) ) <= a.upper):
+			return 1
+		else:
+			return 0		
+	else:
+		raise ValueError("Given object was neither a QuantifiedGroup nor a Quantification: "+string(a))	
 
 #Definition of standard intra relationship constraints
 irreflexive=lambda r: not(any( x==y for x,y in r))
-reflexive=lambda r: all( (x,x) in r for x,y in r)
+reflexive=lambda r: all( (x,x) in r for x,y in r) # need to build [a,b for a,b in r]
 acyclic=lambda r: not(any( x==y for x,y in transitive_closure(r) ))
 cyclic=lambda r: all( (x,x) in r for x,y in transitive_closure(r) )
-total=lambda r: all( (a!=y and b!=x) for a,b in r for x,y in r ) 
-
+# TODO: Fix wrong implementation of total relation, need to build [a,b for a,b in r]
+total=lambda r: all( (a!=y and b!=x) for a,b in r for x,y in r ) # TODO: this fails for \epsilon tuples
 # Definition of the positive infinite
 inf=float("inf")
 
@@ -306,100 +375,126 @@ class ConstraintModel:
 	'''
   Class representation of the Constraint Model.		
 	'''
-	def __init__(self,rolec,card,intra):
+	def __init__(self,rolec,card,intra,inter,grolec):
 		'''
 		Creates a new ConstraintModel from the given role constraint and cardinality mappings as well as from the set of intra-relationship constraints.
 		'''
 		self.rolec=dict(rolec)
 		self.card=dict(card)
 		self.intra=frozenset(intra)
-		#self.inter=frozenset(inter)
-		# assert total function
+		self.inter=frozenset(inter)
+		self.grolec=frozenset(grolec)
 		
 	def __str__(self):
 		'''
 		Returns a String representation of the ConstraintModel.
 		'''
-		return "ConstraintModel({0},{1},{2})".format(self.rolec,self.card,self.intra)
+		return "ConstraintModel({0},{1},{2},{3},{4})".format(self.rolec,self.card,self.intra,self.inter,self.grolec)
 
 	def compliant(self,crom):
 		'''
 		Returns true iff the ConstraintModel is compliant to the given CROM.
 		'''
-		return crom.wellformed() and self.axiom12(crom) # and self.axiom13(crom)
+		return crom.wellformed() and self.axiom10(crom) and \
+		self.axiom11(crom) and self.axiom12(crom) and self.axiom13(crom) \
+		and self.axiom14(crom)
 		
-	def axiom12(cm,crom):
+	def axiom10(cm,crom):
 		'''
 		\\forall ct \\in CT \\forall (c,a) \\in \\text{rolec}(ct) :
 		\\text{atoms}(a) \\subseteq \\text{parts}(ct)
 		'''
-		return all( atoms(a) <= set(crom.parts[ct]) for ct in crom.ct if ct in cm.rolec for crd,a in cm.rolec[ct] )
+		return all( atoms(a) <= crom.parts(ct) for ct in crom.ct if ct in cm.rolec for crd,a in cm.rolec[ct] )
 
-	def newaxiom13(cm,crom):
+	def axiom11(cm,crom):
 		'''
-		\\forall (rst_1,c,rst_2) \in \\text{inter}\!:& rst_1 \\neq rst_2
+		\\mathbf{domain}(card) \\subseteq \\mathbf{domain}(rel)
 		'''
-		return all( rst1 != rest2 for rst1,c,rst2 in crom.inter)
+		return set(cm.card.keys()) <= set(crom.rel.keys())
+		
+	def axiom12(cm,crom):
+		'''
+				\\forall (rst,ct,_) \\in \\text{intra} : (rst,ct) \\in \\mathbf{domain}(rel) 
+		'''
+		return all( (rst,ct) in crom.rel.keys() for (rst,ct,e) in cm.intra )
 
-	def newaxiom14(cm,crom):
+	def axiom13(cm,crom):
 		'''
-		\\forall (rst_1,_,rst_2) \in \\text{inter}\,& \exists! (rst_1,c,rst_2) \in \\text{inter}
+		\\forall (rst_1,ct,_,rst_2) \in \\text{inter} : rst_1 \\neq rst_2
+		(rst_1,ct),(rst_2,ct) \\in \\mathbf{domain}(rel) 
 		'''
-		return all( len(set([c2 for rst3,c2,rst4 in crom.inter if rst1==rst3 and rst2==rst4]))==1 for rst1,c1,rst2 in crom.inter ) 
+		return all( rst1 != rest2 and \
+		(rst_1,ct) in crom.rel.keys() and (rst_2,ct) in crom.rel.keys() \
+		for (rst1,ct,e,rst2) in cm.inter )
+
+	def axiom14(cm,crom):
+		'''
+		\\forall a \\in \\ţext{grolec} : unbound(a) = \\emptyset
+		'''
+		return all( len(unbound(crom,a))==1 for a in cm.grolec ) 
 	
 	def validity(self,crom,croi):
 		'''
 		Returns true iff the ConstraintModel is compliant to the given CROM and the given CROI is valid wrt. the ConstraintModel
 		'''
-		return self.compliant(crom) and croi.compliant(crom) and self.axiom13(crom,croi) and \
-		self.axiom14(crom,croi) and self.axiom15(crom,croi) and self.axiom16(crom,croi)
-		# return self.compliant(crom) and croi.compliant(crom) and self.axiom15(crom,croi) and \
+		return self.compliant(crom) and croi.compliant(crom) and self.axiom15(crom,croi) and \
+		self.axiom16(crom,croi) and self.axiom15(crom,croi) and self.axiom17(crom,croi) and \
+		self.axiom18(crom,croi) and self.axiom19(crom,croi) and self.axiom20(crom,croi) and \
+		self.axiom21(crom,croi)
+		# return self.compliant(crom) and croi.compliant(crom) and self.axiom18(crom,croi) and \
 		# self.axiom16(crom,croi) and self.axiom17(crom,croi) and self.axiom18(crom,croi) and \
 		# self.axiom19(crom,croi) and self.axiom20(crom,croi)
 		
-	def axiom13(cm,crom,croi):
+	def axiom15(cm,crom,croi):
 		'''
 		\\forall ct \\in CT \\forall (i..j,a) \\in \\text{rolec}(ct) \\forall c \\in C_{ct} :
 		i \\leq \\big(\\sum\\nolimits_{o \\in O^c}{a^{\\I^c_o}}\\big) \\leq j
 		'''
 		return all( \
 		crd[0] <= sum( [evaluate(a,croi,o,c) for o in croi.o_c(c)] ) <= crd[1] \
-		for ct in crom.ct if ct in cm.rolec	for crd,a in cm.rolec[ct] for c in croi.c if croi.type1[c]==ct )
+		for ct in crom.ct if ct in cm.rolec	for crd,a in cm.rolec[ct] for c in croi.C_ct(ct) )
 		
-	def axiom14(cm,crom,croi):
+	def axiom16(cm,crom,croi):
 		'''
 		\\forall (o,c,r) \\in \\text{plays} \\forall(crd,a) \\in \\text{rolec}(\\text{type}(c)) :
 		\\text{type}(r) \\in \\text{atoms}(a) \\Rightarrow a^{\\I^c_o} = 1
 		'''
 		return all( evaluate(a,croi,o,c)==1 for o,c,r in croi.plays if croi.type1[c] in cm.rolec for crd,a in cm.rolec[croi.type1[c]] if croi.type1[r] in atoms(a) )
 		
-	def axiom15(cm,crom,croi):
+	def axiom17(cm,crom,croi):
 		'''
 		\\forall rst \\in RST \\forall c \\in C \\forall (r_1,r_2) \\in \\text{links}(rst,c) :
 		\\text{card}(rst)=(i..j,k..l) \\wedge
-		\\big( r_2 \\neq \\varepsilon \\Rightarrow i \\leq \\big| \\text{pred}(rst,c,r_2) \\big| \\leq j \\big) \\wedge
-		\\big( r_1 \\neq \\varepsilon \\Rightarrow k \\leq \\big| \\text{succ}(rst,c,r_1) \\big| \\leq l \\big)		
+		\\big( i \\leq \\big| \\text{pred}(rst,c,r_2) \\big| \\leq j \\big) \\wedge
+		\\big( k \\leq \\big| \\text{succ}(rst,c,r_1) \\big| \\leq l \\big)		
 		'''
 		return all( \
 		( cm.card[rst][0][0] <= len( croi.pred(rst,c,r_2) ) <= cm.card[rst][0][1] ) and \
 		( cm.card[rst][1][0] <= len( croi.succ(rst,c,r_1) ) <= cm.card[rst][1][1] ) \
 		for rst in crom.rst if rst in cm.card for c in croi.c if (rst,c) in croi.links for r_1,r_2 in croi.links[(rst,c)] )
 
-	def axiom16(cm,crom,croi):
+	def axiom18(cm,crom,croi): #need to be fixed
 		'''
-		\\forall c \\in C \\forall (rst,f) \\in intra:\\text{links}(rst,c) = \\emptyset\\ \\vee
+		\\forall c \\in C \\forall (rst,type(c),f) \\in intra: \\text{links}(rst,c) = \\emptyset\\ \\vee
 		f(\\overline{\\text{links}(rst,c)})=1
 		'''
-		return all( f( croi.overline_links(rst,c) )==1 for c in croi.c for rst,f in cm.intra if (rst,c) in croi.links)
+		return all( f( croi.overline_links(rst,c) )==1 for c in croi.c for (rst,ct,f) in cm.intra \
+		if ct==croi.type1[c] and (rst,c) in croi.links)
 		
-	def newaxiom19(cm,crom,croi):
+	def axiom19(cm,crom,croi):
 		'''
-		\\forall c \in C &\ \\forall (rst_1,\otimes,rst_2) \in inter\!:  \\overline{\\text{links}(rst_1,c)} \\cap \\overline{\\text{links}(rst_2,c)} = \emptyset
+		\\forall c \in C &\ \\forall (rst_1,ct,\otimes,rst_2) \in inter\!:  \\overline{\\text{links}(rst_1,c)} \\cap \\overline{\\text{links}(rst_2,c)} = \emptyset
 		'''
-		return all( len(croi.overline_links(rst1,c) & croi.overline_links(rst2,c))==0 for c in croi.c for rst1,e,rst2 in cm.inter if e==">-<")
+		return all( len(croi.overline_links(rst1,c) & croi.overline_links(rst2,c))==0 for c in croi.c for rst1,ct,e,rst2 in cm.inter if ct==croi.type1[c] and e==">-<")
 		
-	def newaxiom20(cm,crom,croi):
+	def axiom20(cm,crom,croi):
 		'''
-		\\forall c \in C &\ \\forall (rst_1,\\trianglelefteq,rst_2) \in inter\!: \\overline{\\text{links}(rst_1,c)} \\subseteq \\overline{\\text{links}(rst_2,c)}
+		\\forall c \in C &\ \\forall (rst_1,ct,\\trianglelefteq,rst_2) \in inter\!: \\overline{\\text{links}(rst_1,c)} \\subseteq \\overline{\\text{links}(rst_2,c)}
 		'''
-		return all( croi.overline_links(rst1,c).issubset(croi.overline_links(rst2,c) ) for c in croi.c for rst1,i,rst2 in cm.inter if i=="-|>")
+		return all( croi.overline_links(rst1,c) <= croi.overline_links(rst2,c) for c in croi.c for rst1,ct,i,rst2 in cm.inter if ct==croi.type1[c] and i=="-|>")
+		
+	def axiom21(cm,crom,croi):
+		'''
+		\\forall o \in O \\forall a \in grolec: a^{\I_o} = 1
+		'''
+		return all( evaluateQ(a,croi,o)==1  for o in croi.o() for a in cm.grolec )

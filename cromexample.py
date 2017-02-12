@@ -18,21 +18,43 @@ bank=CROM(["Person","Company","Account"], # NT
           ["Customer","Consultant","CA","SA","Source","Target","MoneyTransfer"], # RT
           ["Bank","Transaction"], # CT
           ["own_ca","own_sa","advises","trans"], #RST
-          [("Person","Consultant"),("Person","Customer"), ("Company","Customer"), 
-           ("Account","Source"),("Account","Target"), ("Account","CA"), ("Account","SA"),
-           ("Transaction","MoneyTransfer")], #fills
-          {"Bank": ["Consultant","Customer","CA","SA","MoneyTransfer"],
-           "Transaction": ["Source","Target"] }, #parts
-          {"own_ca": ("Customer","CA"),
-           "own_sa": ("Customer","SA"),
-           "advises": ("Consultant","Customer"),
-           "trans": ("Source","Target") } #rel
+          [("Person","Bank","Consultant"),("Person","Bank","Customer"), ("Company","Bank","Customer"), 
+           ("Account","Transaction","Source"),("Account","Transaction","Target"), ("Account","Bank","CA"), ("Account","Bank","SA"),
+           ("Transaction","Bank","MoneyTransfer")], #fills
+          {("own_ca","Bank"): ("Customer","CA"),
+           ("own_sa","Bank"): ("Customer","SA"),
+           ("advises","Bank"): ("Consultant","Customer"),
+           ("trans","Transaction"): ("Source","Target") } #rel
           )
 print bank
+print " The following axioms were violated:"
+if not bank.axiom1():
+	print "  axiom1"
+if not bank.axiom2():
+	print "  axiom2"
+if not bank.axiom3():
+	print "  axiom3"
+if not bank.axiom4():
+	print "  axiom4"
+if not bank.axiom5():
+	print "  axiom5"
+print
+
 if bank.wellformed():
 	print " The bank model is a wellformed CROM"
 else:
 	print " The bank model is not wellformed"
+	print " The following axioms were violated:"
+	if not bank.axiom1():
+		print "  axiom1"
+	if not bank.axiom2():
+		print "  axiom2"
+	if not bank.axiom3():
+		print "  axiom3"
+	if not bank.axiom4():
+		print "  axiom4"
+	if not bank.axiom5():
+		print "  axiom5"
 print
 
 # Role Groups in the Bank
@@ -41,35 +63,45 @@ print "=== Role Groups in the Bank ==="
 
 bankaccounts=RoleGroup(["CA","SA"],1,1)
 participants=RoleGroup(["Source","Target"],1,1)
+#accountimpl=QuantifiedGroup(...)
 
 print " bankaccounts={0}".format(bankaccounts)
 print " participants={0}".format(participants)
 print
 
 # Constraint Model for the Bank
-
 print "=== Constraint Model for the Bank ==="
-
 c_bank=ConstraintModel( {"Bank": [ ( (1,inf),"Consultant"),((0,inf),bankaccounts) ],
-                         "Transaction": [ ( (2,2),participants) ] }, #rolec
-                        { "own_ca": ((1,1),(0,inf)),
-                          "own_sa": ((1,inf),(0,inf)),
-                          "advises": ((0,inf),(1,inf)),
-                          "trans": ((1,1),(1,1)) }, #card
-                        [ ("advises",irreflexive) ] #intra
-                       )
+                       "Transaction": [ ( (2,2),participants) ] }, #rolec
+                      { ("own_ca","Bank"): ((1,1),(0,inf)),
+                        ("own_sa","Bank"): ((1,inf),(0,inf)),
+                        ("advises","Bank"): ((0,inf),(1,inf)),
+                        ("trans","Transaction"): ((1,1),(1,1)) }, #card
+                      [ ("advises","Bank",irreflexive) ], #intra
+                      [], #inter
+                      []  #grolec
+                     )
 print c_bank
 if c_bank.compliant(bank):
 	print "The constraint model is compliant to the CROM bank"
 else:
 	print "The constraint model is not compliant to the CROM bank"
+	if not c_bank.axiom10(bank):
+		print "  axiom10"
+	if not c_bank.axiom11(bank):
+		print "  axiom11"
+	if not c_bank.axiom12(bank):
+		print "  axiom12"
+	if not c_bank.axiom13(bank):
+		print "  axiom13"
+	if not c_bank.axiom14(bank):
+		print "  axiom14"
 
 print
 
 # First Instance of the Bank Model
 
 print "=== First Instance of the Bank Model ==="
-
 
 bank1=CROI( ["Peter","Klaus","Google","Account_1","Account_2"], #n
             ["Cu_1","Cu_2","Cu_3","Ca","Sa","S","T","M"], #r
@@ -84,9 +116,9 @@ bank1=CROI( ["Peter","Klaus","Google","Account_1","Account_2"], #n
              ("Account_2","bank","Ca"),("Account_1","bank","Sa"),
              ("transaction","bank","M"),
              ("Account_2","transaction","S"),("Account_2","transaction","T") ], #plays
-            {("own_ca","bank"): [ ("Cu_1","Ca"), ("Cu_2",None), ("Cu_3",None) ],
-             ("own_sa","bank"): [ ("Cu_1",None), ("Cu_2","Sa"), ("Cu_3",None)],
-             ("advises","bank"): [ (None,"Cu_1"), (None,"Cu_2") , (None,"Cu_3") ],
+            {("own_ca","bank"): [ ("Cu_1","Ca") ],
+             ("own_sa","bank"): [ ("Cu_2","Sa")],
+             ("advises","bank"): [],
              ("trans","transaction"): [ ("S","T") ]} #links
            )
 
@@ -105,11 +137,6 @@ else:
 		print "  axiom8"
 	if not bank1.axiom9(bank):
 		print "  axiom9"
-	if not bank1.axiom10(bank):
-		print "  axiom10"
-	if not bank1.axiom11(bank):
-		print "  axiom11"
-
 print
 
 # Second Instance of the Bank Model
@@ -130,9 +157,9 @@ bank2=CROI( ["Peter","Klaus","Google","Account_1","Account_2"], #n
              ("Account_2","bank","Ca"),("Account_1","bank","Sa"),
              ("transaction","bank","M"),
              ("Account_1","transaction","S"),("Account_2","transaction","T") ], #plays
-            {("own_ca","bank"): [ ("Cu_1","Ca"), ("Cu_2",None) ],
-             ("own_sa","bank"): [ ("Cu_1",None), ("Cu_2","Sa")],
-             ("advises","bank"): [ (None,"Cu_1"), ("Con","Cu_2") ],
+            {("own_ca","bank"): [ ("Cu_1","Ca") ],
+             ("own_sa","bank"): [ ("Cu_2","Sa")],
+             ("advises","bank"): [ ("Con","Cu_2") ],
              ("trans","transaction"): [ ("S","T") ]} #links
            )
 
@@ -151,11 +178,6 @@ else:
 		print "  axiom8"
 	if not bank2.axiom9(bank):
 		print "  axiom9"
-	if not bank2.axiom10(bank):
-		print "  axiom10"
-	if not bank2.axiom11(bank):
-		print "  axiom11"
-
 print
 
 # Evaluation
@@ -167,14 +189,20 @@ if c_bank.validity(bank,bank1):
 else:
 	print " The first example is an invalid model of the bank wrt to the constraint model"
 	print " The following axioms were violated:"
-	if not c_bank.axiom13(bank,bank1):
-		print "  axiom13"
-	if not c_bank.axiom14(bank,bank1):
-		print "  axiom14"
 	if not c_bank.axiom15(bank,bank1):
 		print "  axiom15"
 	if not c_bank.axiom16(bank,bank1):
 		print "  axiom16"
+	if not c_bank.axiom17(bank,bank1):
+		print "  axiom17"
+	if not c_bank.axiom18(bank,bank1):
+		print "  axiom18"
+	if not c_bank.axiom19(bank,bank1):
+		print "  axiom19"
+	if not c_bank.axiom20(bank,bank1):
+		print "  axiom20"
+	if not c_bank.axiom21(bank,bank1):
+		print "  axiom21"
 		
 print
 
@@ -183,13 +211,19 @@ if c_bank.validity(bank,bank2):
 else:
 	print " The second example is an invalid model of the bank wrt to the constraint model"
 	print " The following axioms were violated"
-	if not c_bank.axiom13(bank,bank2):
-		print "  axiom13"
-	if not c_bank.axiom14(bank,bank2):
-		print "  axiom14"
 	if not c_bank.axiom15(bank,bank2):
 		print "  axiom15"
 	if not c_bank.axiom16(bank,bank2):
 		print "  axiom16"
+	if not c_bank.axiom17(bank,bank2):
+		print "  axiom17"
+	if not c_bank.axiom18(bank,bank2):
+		print "  axiom18"
+	if not c_bank.axiom19(bank,bank2):
+		print "  axiom19"
+	if not c_bank.axiom20(bank,bank2):
+		print "  axiom20"
+	if not c_bank.axiom21(bank,bank2):
+		print "  axiom21"
 						
 print
