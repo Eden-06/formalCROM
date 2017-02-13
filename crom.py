@@ -192,6 +192,12 @@ class CROI:
 		'''
 		return [ o for o,c_1,r in self.plays if c_1==c ]
 		
+	def o_c_rt(self,c,rt):
+		'''
+		O^c_{rt} \\coloneqq \\{ o \\in O \\mid \\exists r \\in R : (o,c,r) \\in \\text{plays} \wedge \\text{type}(r)=rt \\}
+		'''
+		return [ o for o,c_1,r in self.plays if c_1==c and self.type1[r]==rt ]
+		
 	def pred(self,rst,c,r):
 		'''
 		\\text{pred}(rst,c,r) \\coloneqq & \\{ r' \\mid (r',r) \\in \\text{links}(\\text{rst},c) \\}
@@ -362,12 +368,11 @@ def evaluateQ(a,croi,o):
 		raise ValueError("Given object was neither a QuantifiedGroup nor a Quantification: "+string(a))	
 
 #Definition of standard intra relationship constraints
-irreflexive=lambda r: not(any( x==y for x,y in r))
-reflexive=lambda r: all( (x,x) in r for x,y in r) # need to build [a,b for a,b in r]
-acyclic=lambda r: not(any( x==y for x,y in transitive_closure(r) ))
-cyclic=lambda r: all( (x,x) in r for x,y in transitive_closure(r) )
-# TODO: Fix wrong implementation of total relation, need to build [a,b for a,b in r]
-total=lambda r: all( (a!=y and b!=x) for a,b in r for x,y in r ) # TODO: this fails for \epsilon tuples
+irreflexive=lambda a,b,r: not(any( x==y for x,y in r))
+reflexive=lambda a,b,r: all( (x,x) in r for x in (a|b) )
+acyclic=lambda a,b,r: not(any( x==y for x,y in transitive_closure(r) ))
+cyclic=lambda a,b,r: all( (x,x) in r for x,y in transitive_closure(r) )
+total=lambda a,b,r: all( any( (x,y) in r  for y in b) for x in a)
 # Definition of the positive infinite
 inf=float("inf")
 
@@ -475,11 +480,12 @@ class ConstraintModel:
 
 	def axiom18(cm,crom,croi): #need to be fixed
 		'''
-		\\forall c \\in C \\forall (rst,type(c),f) \\in intra: \\text{links}(rst,c) = \\emptyset\\ \\vee
-		f(\\overline{\\text{links}(rst,c)})=1
+		\\forall c \\in C \\forall (rst,type(c),f) \\in intra: \\text{rel}(rst,\\text{type}(c))=(rt_1,rt_2) \wedge f(O^c_{rt_1}, O^c_{rt_1}), \\overline{\\text{links}(rst,c)})=1
 		'''
-		return all( f( croi.overline_links(rst,c) )==1 for c in croi.c for (rst,ct,f) in cm.intra \
-		if ct==croi.type1[c] and (rst,c) in croi.links)
+		return all( f(set( croi.o_c_rt(c,crom.rel[ (rst,croi.type1[c]) ][0]) ), \
+		set( croi.o_c_rt(c,crom.rel[ (rst,croi.type1[c]) ][1]) ), \
+		croi.overline_links(rst,c) )==1 \
+		for c in croi.c for (rst,ct,f) in cm.intra if ct==croi.type1[c] and (rst,c) in croi.links)
 		
 	def axiom19(cm,crom,croi):
 		'''
