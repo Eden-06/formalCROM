@@ -382,6 +382,9 @@ total=lambda a,b,r: all( x==y or (x,y) in r or (y,x) in r for x in (a|b) for y i
 
 # Definition of the positive infinite
 inf=float("inf")
+# Definition of inter-relationship constraints
+implication="-|>"
+exclusion=">-<"
 
 class ConstraintModel:
 	'''
