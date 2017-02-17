@@ -94,8 +94,6 @@ else:
 		print "  axiom12"
 	if not c_bank.axiom13(bank):
 		print "  axiom13"
-	if not c_bank.axiom14(bank):
-		print "  axiom14"
 
 print
 
@@ -104,21 +102,21 @@ print
 print "=== First Instance of the Bank Model ==="
 
 bank1=CROI( ["Peter","Klaus","Google","Account_1","Account_2"], #n
-            ["Cu_1","Cu_2","Cu_3","Ca","Sa","S","T","M"], #r
+            ["Cu_1","Cu_2","Cu_3","Ca","Sa","S","T","M","Con","Con1"], #r
             ["bank","transaction"], #c
             {"Peter": "Person", "Klaus":"Person", "Google":"Company",
              "Account_1":"Account", "Account_2":"Account",
              "Cu_1":"Customer", "Cu_2":"Customer", "Cu_3":"Customer",
              "Ca":"CA", "Sa":"SA", "S":"Source", "T":"Target", 
-             "M":"MoneyTransfer",
+             "M":"MoneyTransfer", "Con":"Consultant", "Con1":"Consultant",
              "bank":"Bank", "transaction":"Transaction"}, #type1
             [("Klaus","bank","Cu_1"),("Google","bank","Cu_2"),("Peter","bank","Cu_3"),
              ("Account_2","bank","Ca"),("Account_1","bank","Sa"),
-             ("transaction","bank","M"),
+             ("transaction","bank","M"),("Klaus","bank","Con"),("Peter","bank","Con1"),
              ("Account_2","transaction","S"),("Account_2","transaction","T") ], #plays
             {("own_ca","bank"): [ ("Cu_1","Ca") ],
-             ("own_sa","bank"): [ ("Cu_2","Sa")],
-             ("advises","bank"): [],
+             ("own_sa","bank"): [ ("Cu_2","Sa") ],
+             ("advises","bank"): [ ("Con","Cu_1") ],
              ("trans","transaction"): [ ("S","T") ]} #links
            )
 
@@ -189,28 +187,8 @@ if c_bank.validity(bank,bank1):
 else:
 	print " The first example is an invalid model of the bank wrt to the constraint model"
 	print " The following axioms were violated:"
-	if not c_bank.axiom15(bank,bank1):
-		print "  axiom15"
-	if not c_bank.axiom16(bank,bank1):
-		print "  axiom16"
-	if not c_bank.axiom17(bank,bank1):
-		print "  axiom17"
-	if not c_bank.axiom18(bank,bank1):
-		print "  axiom18"
-	if not c_bank.axiom19(bank,bank1):
-		print "  axiom19"
-	if not c_bank.axiom20(bank,bank1):
-		print "  axiom20"
-	if not c_bank.axiom21(bank,bank1):
-		print "  axiom21"
-		
-print
-
-if c_bank.validity(bank,bank2):
-	print " The second example is a valid model of the bank wrt to the constraint model"
-else:
-	print " The second example is an invalid model of the bank wrt to the constraint model"
-	print " The following axioms were violated"
+	if not c_bank.axiom14(bank,bank2):
+		print "  axiom14"
 	if not c_bank.axiom15(bank,bank2):
 		print "  axiom15"
 	if not c_bank.axiom16(bank,bank2):
@@ -223,7 +201,27 @@ else:
 		print "  axiom19"
 	if not c_bank.axiom20(bank,bank2):
 		print "  axiom20"
-	if not c_bank.axiom21(bank,bank2):
-		print "  axiom21"
+		
+print
+
+if c_bank.validity(bank,bank2):
+	print " The second example is a valid model of the bank wrt to the constraint model"
+else:
+	print " The second example is an invalid model of the bank wrt to the constraint model"
+	print " The following axioms were violated"
+	if not c_bank.axiom14(bank,bank2):
+		print "  axiom14"
+	if not c_bank.axiom15(bank,bank2):
+		print "  axiom15"
+	if not c_bank.axiom16(bank,bank2):
+		print "  axiom16"
+	if not c_bank.axiom17(bank,bank2):
+		print "  axiom17"
+	if not c_bank.axiom18(bank,bank2):
+		print "  axiom18"
+	if not c_bank.axiom19(bank,bank2):
+		print "  axiom19"
+	if not c_bank.axiom20(bank,bank2):
+		print "  axiom20"
 						
 print

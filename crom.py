@@ -85,7 +85,7 @@ class CROM:
 		
 	def axiom3(crom):
 		'''
-		\\forall rst \\in RST \\exists ct \\in CT : (rst,ct) \\in \textbf{domain}(rel)
+		\\forall rst \\in RST \\exists ct \\in CT : (rst,ct) \\in \\textbf{domain}(rel)
 		'''
 		return all( any( (rst,ct) in crom.rel.keys() for ct in crom.ct ) for rst in crom.rst ) 
 		
@@ -197,6 +197,12 @@ class CROI:
 		O^c_{rt} \\coloneqq \\{ o \\in O \\mid \\exists r \\in R : (o,c,r) \\in \\text{plays} \wedge \\text{type}(r)=rt \\}
 		'''
 		return [ o for o,c_1,r in self.plays if c_1==c and self.type1[r]==rt ]
+	
+	def r_c_rt(self,c,rt):
+		'''
+		R^c_{rt} \\coloneqq \\{ r \\in R \\mid (o,c,r) \\in \\text{plays} \wedge \\text{type}(r)=rt \\}
+		'''
+		return [ r for o,c_1,r in self.plays if c_1==c and self.type1[r]==rt ]
 		
 	def pred(self,rst,c,r):
 		'''
@@ -372,7 +378,8 @@ irreflexive=lambda a,b,r: not(any( x==y for x,y in r))
 reflexive=lambda a,b,r: all( (x,x) in r for x in (a|b) )
 acyclic=lambda a,b,r: not(any( x==y for x,y in transitive_closure(r) ))
 cyclic=lambda a,b,r: all( (x,x) in r for x,y in transitive_closure(r) )
-total=lambda a,b,r: all( any( (x,y) in r  for y in b) for x in a)
+total=lambda a,b,r: all( x==y or (x,y) in r or (y,x) in r for x in (a|b) for y in (a|b) )
+
 # Definition of the positive infinite
 inf=float("inf")
 
@@ -401,15 +408,15 @@ class ConstraintModel:
 		Returns true iff the ConstraintModel is compliant to the given CROM.
 		'''
 		return crom.wellformed() and self.axiom10(crom) and \
-		self.axiom11(crom) and self.axiom12(crom) and self.axiom13(crom) \
-		and self.axiom14(crom)
+		self.axiom11(crom) and self.axiom12(crom) and self.axiom13(crom)
+		#and self.axiom14(crom)
 		
 	def axiom10(cm,crom):
 		'''
-		\\forall ct \\in CT \\forall (c,a) \\in \\text{rolec}(ct) :
+		\\forall ct \\in \textbf{domain}(rolec) \\forall (c,a) \\in \\text{rolec}(ct) :
 		\\text{atoms}(a) \\subseteq \\text{parts}(ct)
 		'''
-		return all( atoms(a) <= crom.parts(ct) for ct in crom.ct if ct in cm.rolec for crd,a in cm.rolec[ct] )
+		return all( atoms(a) <= crom.parts(ct) for ct in cm.rolec.keys() for crd,a in cm.rolec[ct] )
 
 	def axiom11(cm,crom):
 		'''
@@ -432,7 +439,7 @@ class ConstraintModel:
 		(rst_1,ct) in crom.rel.keys() and (rst_2,ct) in crom.rel.keys() \
 		for (rst1,ct,e,rst2) in cm.inter )
 
-	def axiom14(cm,crom):
+	def oldaxiom14(cm,crom):
 		'''
 		\\forall a \\in \\ţext{grolec} : unbound(a) = \\emptyset
 		'''
@@ -442,15 +449,11 @@ class ConstraintModel:
 		'''
 		Returns true iff the ConstraintModel is compliant to the given CROM and the given CROI is valid wrt. the ConstraintModel
 		'''
-		return self.compliant(crom) and croi.compliant(crom) and self.axiom15(crom,croi) and \
-		self.axiom16(crom,croi) and self.axiom15(crom,croi) and self.axiom17(crom,croi) and \
-		self.axiom18(crom,croi) and self.axiom19(crom,croi) and self.axiom20(crom,croi) and \
-		self.axiom21(crom,croi)
-		# return self.compliant(crom) and croi.compliant(crom) and self.axiom18(crom,croi) and \
-		# self.axiom16(crom,croi) and self.axiom17(crom,croi) and self.axiom18(crom,croi) and \
-		# self.axiom19(crom,croi) and self.axiom20(crom,croi)
-		
-	def axiom15(cm,crom,croi):
+		return self.compliant(crom) and croi.compliant(crom) and self.axiom14(crom,croi) and \
+		self.axiom15(crom,croi) and self.axiom16(crom,croi) and self.axiom17(crom,croi) and \
+		self.axiom18(crom,croi) and self.axiom19(crom,croi) and self.axiom20(crom,croi) 
+
+	def axiom14(cm,crom,croi):
 		'''
 		\\forall ct \\in CT \\forall (i..j,a) \\in \\text{rolec}(ct) \\forall c \\in C_{ct} :
 		i \\leq \\big(\\sum\\nolimits_{o \\in O^c}{a^{\\I^c_o}}\\big) \\leq j
@@ -459,26 +462,29 @@ class ConstraintModel:
 		crd[0] <= sum( [evaluate(a,croi,o,c) for o in croi.o_c(c)] ) <= crd[1] \
 		for ct in crom.ct if ct in cm.rolec	for crd,a in cm.rolec[ct] for c in croi.C_ct(ct) )
 		
-	def axiom16(cm,crom,croi):
+	def axiom15(cm,crom,croi):
 		'''
 		\\forall (o,c,r) \\in \\text{plays} \\forall(crd,a) \\in \\text{rolec}(\\text{type}(c)) :
 		\\text{type}(r) \\in \\text{atoms}(a) \\Rightarrow a^{\\I^c_o} = 1
 		'''
 		return all( evaluate(a,croi,o,c)==1 for o,c,r in croi.plays if croi.type1[c] in cm.rolec for crd,a in cm.rolec[croi.type1[c]] if croi.type1[r] in atoms(a) )
 		
-	def axiom17(cm,crom,croi):
+	def axiom16(cm,crom,croi):
 		'''
-		\\forall rst \\in RST \\forall c \\in C \\forall (r_1,r_2) \\in \\text{links}(rst,c) :
-		\\text{card}(rst)=(i..j,k..l) \\wedge
-		\\big( i \\leq \\big| \\text{pred}(rst,c,r_2) \\big| \\leq j \\big) \\wedge
-		\\big( k \\leq \\big| \\text{succ}(rst,c,r_1) \\big| \\leq l \\big)		
+		\\forall c \\in C \\forall (rst,type(c)) \\in \mathbf{domain}(card) :
+		\\text{rel}(rst,type(c))=(rt_1,rt_2) \\wedge
+		\\text{card}(rst,type(c))=(i..j,k..l) \\wedge
+		\\big( \\forall r_2 \\in R^c_{rt_2}: i \\leq \\big| \\text{pred}(rst,c,r_2) \\big| \\leq j \\big) \\wedge
+		\\big( \\forall r_1 \\in R^c_{rt_1}: k \\leq \\big| \\text{succ}(rst,c,r_1) \\big| \\leq l \\big)		
 		'''
 		return all( \
-		( cm.card[rst][0][0] <= len( croi.pred(rst,c,r_2) ) <= cm.card[rst][0][1] ) and \
-		( cm.card[rst][1][0] <= len( croi.succ(rst,c,r_1) ) <= cm.card[rst][1][1] ) \
-		for rst in crom.rst if rst in cm.card for c in croi.c if (rst,c) in croi.links for r_1,r_2 in croi.links[(rst,c)] )
+		all( cm.card[(rst,ct)][0][0] <= len( croi.pred(rst,c,r_2) ) <= cm.card[(rst,ct)][0][1] \
+		for r_2 in croi.r_c_rt(c,crom.rel[(rst,ct)][1]) ) and \
+		all( cm.card[(rst,ct)][1][0] <= len( croi.succ(rst,c,r_1) ) <= cm.card[(rst,ct)][1][1] \
+		for r_1 in croi.r_c_rt(c,crom.rel[(rst,ct)][0]) ) \
+		for c in croi.c for (rst,ct) in cm.card.keys() if ct==croi.type1[c] )
 
-	def axiom18(cm,crom,croi): #need to be fixed
+	def axiom17(cm,crom,croi):
 		'''
 		\\forall c \\in C \\forall (rst,type(c),f) \\in intra: \\text{rel}(rst,\\text{type}(c))=(rt_1,rt_2) \wedge f(O^c_{rt_1}, O^c_{rt_1}), \\overline{\\text{links}(rst,c)})=1
 		'''
@@ -487,20 +493,20 @@ class ConstraintModel:
 		croi.overline_links(rst,c) )==1 \
 		for c in croi.c for (rst,ct,f) in cm.intra if ct==croi.type1[c] and (rst,c) in croi.links)
 		
-	def axiom19(cm,crom,croi):
+	def axiom18(cm,crom,croi):
 		'''
 		\\forall c \in C &\ \\forall (rst_1,ct,\otimes,rst_2) \in inter\!:  \\overline{\\text{links}(rst_1,c)} \\cap \\overline{\\text{links}(rst_2,c)} = \emptyset
 		'''
 		return all( len(croi.overline_links(rst1,c) & croi.overline_links(rst2,c))==0 for c in croi.c for rst1,ct,e,rst2 in cm.inter if ct==croi.type1[c] and e==">-<")
 		
-	def axiom20(cm,crom,croi):
+	def axiom19(cm,crom,croi):
 		'''
 		\\forall c \in C &\ \\forall (rst_1,ct,\\trianglelefteq,rst_2) \in inter\!: \\overline{\\text{links}(rst_1,c)} \\subseteq \\overline{\\text{links}(rst_2,c)}
 		'''
 		return all( croi.overline_links(rst1,c) <= croi.overline_links(rst2,c) for c in croi.c for rst1,ct,i,rst2 in cm.inter if ct==croi.type1[c] and i=="-|>")
 		
-	def axiom21(cm,crom,croi):
+	def axiom20(cm,crom,croi):
 		'''
 		\\forall o \in O \\forall a \in grolec: a^{\I_o} = 1
 		'''
-		return all( evaluateQ(a,croi,o)==1  for o in croi.o() for a in cm.grolec )
+		return all( evaluateQ(a,croi,o)==1 for o in croi.o() for a in cm.grolec )
