@@ -438,8 +438,8 @@ class ConstraintModel:
 		\\forall (rst_1,ct,_,rst_2) \in \\text{inter} : rst_1 \\neq rst_2
 		(rst_1,ct),(rst_2,ct) \\in \\mathbf{domain}(rel) 
 		'''
-		return all( rst1 != rest2 and \
-		(rst_1,ct) in crom.rel.keys() and (rst_2,ct) in crom.rel.keys() \
+		return all( rst1 != rst2 and \
+		(rst1,ct) in crom.rel.keys() and (rst2,ct) in crom.rel.keys() \
 		for (rst1,ct,e,rst2) in cm.inter )
 
 	def oldaxiom14(cm,crom):

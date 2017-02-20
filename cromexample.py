@@ -78,7 +78,7 @@ c_bank=ConstraintModel( {"Bank": [ ( (1,inf),"Consultant"),((0,inf),bankaccounts
                         ("advises","Bank"): ((0,inf),(1,inf)),
                         ("trans","Transaction"): ((1,1),(1,1)) }, #card
                       [ ("advises","Bank",irreflexive) ], #intra
-                      [], #inter
+                      [ ("own_ca","Bank",exclusion,"own_sa")], #inter
                       []  #grolec
                      )
 print c_bank
@@ -187,19 +187,19 @@ if c_bank.validity(bank,bank1):
 else:
 	print " The first example is an invalid model of the bank wrt to the constraint model"
 	print " The following axioms were violated:"
-	if not c_bank.axiom14(bank,bank2):
+	if not c_bank.axiom14(bank,bank1):
 		print "  axiom14"
-	if not c_bank.axiom15(bank,bank2):
+	if not c_bank.axiom15(bank,bank1):
 		print "  axiom15"
-	if not c_bank.axiom16(bank,bank2):
+	if not c_bank.axiom16(bank,bank1):
 		print "  axiom16"
-	if not c_bank.axiom17(bank,bank2):
+	if not c_bank.axiom17(bank,bank1):
 		print "  axiom17"
-	if not c_bank.axiom18(bank,bank2):
+	if not c_bank.axiom18(bank,bank1):
 		print "  axiom18"
-	if not c_bank.axiom19(bank,bank2):
+	if not c_bank.axiom19(bank,bank1):
 		print "  axiom19"
-	if not c_bank.axiom20(bank,bank2):
+	if not c_bank.axiom20(bank,bank1):
 		print "  axiom20"
 		
 print
