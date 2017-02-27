@@ -8,7 +8,7 @@ import itertools
 __author__ = "Thomas Kühn"
 __copyright__ = "Copyright 2014"
 __license__ = "MIT"
-__version__ = "1.0.2"
+__version__ = "1.0.3"
 
 # Basic Defintions
 
@@ -252,7 +252,7 @@ class RoleGroup:
 		self.rolegroups = frozenset(rolegroups)
 		self.lower = int(lower)
 		self.upper = int(upper)
-		if not (0 <= lower <= upper):
+		if not (0 <= self.lower <= self.upper):
 			raise ValueError("lower must be less or equal to upper")
 			
 	def __str__(self):
@@ -293,7 +293,7 @@ def evaluate(a,croi,o,c):
 			return 0
 
 
-class QuantifiedRoleGroup:
+class QuantifiedRoleGroup(object):
 	'''
 	Class representation of Role Groups.
 	'''
@@ -309,14 +309,14 @@ class QuantifiedGroup(QuantifiedRoleGroup):
 		self.qrgs = frozenset(qrgs)
 		self.lower = int(lower)
 		self.upper = int(upper)
-		if not (0 <= lower <= upper):
+		if not (0 <= self.lower <= self.upper):
 			raise ValueError("lower must be less or equal to upper")
 			
 	def __str__(self):
 		'''
 		Returns a String representation of the RoleGroup.
 		'''
-		return "QuantifiedGroup({0},{1},{2})".format(self.rolegroups,self.lower,self.upper)
+		return "QuantifiedGroup({0},{1},{2})".format(self.qrgs,self.lower,self.upper)
 		
 		
 class Quantification(QuantifiedRoleGroup):
@@ -327,9 +327,12 @@ class Quantification(QuantifiedRoleGroup):
 		super(Quantification, self).__init__()
 		self.ct=ct
 		self.lower = int(lower)
-		self.upper = int(upper)
+		if upper < 0: # -1 indicates infinity
+			self.upper = float("inf")
+		else:
+			self.upper = int(upper)
 		self.rolegroup = RoleGroup(rolegroup.rolegroups,rolegroup.lower,rolegroup.upper)
-		if not (0 <= lower <= upper):
+		if not (0 <= self.lower <= self.upper):
 			raise ValueError("lower must be less or equal to upper")
 			
 	def __str__(self):
@@ -361,7 +364,7 @@ def evaluateQ(a,croi,o):
 	\\end{cases}	
 	'''
 	if isinstance(a,QuantifiedGroup):
-		if (a.lower <= sum( evaluateQ(b,croi,o) for b in a.rolegroups ) <= a.upper):
+		if (a.lower <= sum( evaluateQ(b,croi,o) for b in a.qrgs ) <= a.upper):
 			return 1
 		else:
 			return 0

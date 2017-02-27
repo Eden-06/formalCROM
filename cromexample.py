@@ -6,7 +6,7 @@
 __author__ = "Thomas Kühn"
 __copyright__ = "Copyright 2014"
 __license__ = "MIT"
-__version__ = "1.0.0"
+__version__ = "1.0.3"
 
 from crom import *
 
@@ -69,6 +69,21 @@ print " bankaccounts={0}".format(bankaccounts)
 print " participants={0}".format(participants)
 print
 
+print "=== Quantified Role Groups in the Bank ==="
+
+pa=RoleGroup(["Source","Target"],1,2)
+ba=RoleGroup(["CA","SA"],1,2)
+l=Quantification("Transaction",1,-1,pa)
+r=Quantification("Bank",1,-1,ba)
+existentialimpl=QuantifiedGroup([QuantifiedGroup([l],0,0),r],1,2)
+
+#accountimpl=QuantifiedGroup(...)
+
+print " existentialimpl={0}".format(existentialimpl)
+print
+
+
+Quantification
 # Constraint Model for the Bank
 print "=== Constraint Model for the Bank ==="
 c_bank=ConstraintModel( {"Bank": [ ( (1,inf),"Consultant"),((0,inf),bankaccounts) ],
@@ -79,7 +94,7 @@ c_bank=ConstraintModel( {"Bank": [ ( (1,inf),"Consultant"),((0,inf),bankaccounts
                         ("trans","Transaction"): ((1,1),(1,1)) }, #card
                       [ ("advises","Bank",irreflexive) ], #intra
                       [ ("own_ca","Bank",exclusion,"own_sa")], #inter
-                      []  #grolec
+                      [existentialimpl]  #grolec
                      )
 print c_bank
 if c_bank.compliant(bank):

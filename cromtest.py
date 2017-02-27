@@ -24,25 +24,36 @@ disjointtests=[([set(),set()],True),
 for s,e in disjointtests:
 	assert mutual_disjoint(s)==e, "Case mutual_disjoint({0})!={1}".format(s,e)
 
+transitive_closuretest=[ ([],set([])), ([(1,2),(2,3)],set([(1,2),(2,3),(1,3)])), \
+([(1,2),(2,3),(3,1)],set([(1,1),(2,2),(1,1),(3,3),(1,2),(2,3),(1,3),(3,1),(2,1),(3,2)])) ]
+for s,e in transitive_closuretest:
+	assert transitive_closure(s)==e, "Case transitive_closure({0})!={1}".format(s,e)
+
 # Test Cases for CROM
 
 print "Testing... CROM"
 
-test0=CROM([],[],[],[],[],{},{})
-test1=CROM([1],[2,3],[4],['a'],[(1,2),(1,3)],{4:[2,3]},{'a':(2,3)})
-test2=CROM([1],[2,3],[4],['a'],[(1,2)],{4:[2,3]},{'a':(2,3)})
-test3=CROM([1],[2,3],[4,5],['a'],[(1,2),(1,3)],{4:[2,3],5:[]},{'a':(2,3)})
-test4=CROM([1],[2,3],[4,5],['a'],[(1,2),(1,3)],{4:[2,3],5:[2]},{'a':(2,3)})
-test5=CROM([1],[2,3],[4],['a'],[(1,2),(1,3)],{4:[2,3]},{'a':(2,2)})
-test6=CROM([1],[2,3],[4,5],['a'],[(1,2),(1,3)],{4:[2],5:[3]},{'a':(2,3)})
-test7=CROM([1],[2,3,4],[5,6],['a'],[(1,2),(1,3)],{5:[3],6:[]},{'a':(2,2)})
+test0=CROM([],[],[],[],[],{})
+test1=CROM([1],[2,3],[4],['a'],[(1,4,2),(1,4,3)],{('a',4):(2,3)})
+test2=CROM([1],[2,3,5],[4],['a'],[(1,4,2),(1,4,3)],{('a',4):(2,3)})
+test21=CROM([1],[2,3],[4,5],['a'],[(1,4,2),(1,4,3),(1,5,3)],{('a',4):(2,3)})
+test3=CROM([1],[2,3],[4,5],['a'],[(1,4,2),(1,4,3)],{('a',4):(2,3)})
+test4=CROM([1],[2,3],[4],['a'],[(1,4,2),(1,4,3)],{})
+test5=CROM([1],[2,3],[4],['a'],[(1,4,2),(1,4,3)],{('a',4):(2,2)})
+test6=CROM([1],[2,3],[4,5],['a'],[(1,4,2),(1,5,3)],{('a',4):(2,3)})
+test7=CROM([1],[2,3,4],[5,6],['a','b'],[(1,5,3)],{('a',5):(2,2)})
 
 
 cromtests=[(test0,True,True,True,True,True),
-           (test1,True,True,True,True,True),  (test2,False,True,True,True,True),
-           (test3,True,False,True,True,True), (test4,True,True,False,True,True),
-           (test5,True,True,True,False,True), (test6,True,True,True,True,False),
-           (test7,False,False,False,False,False)]
+           (test1,True,True,True,True,True),  
+           (test2,False,True,True,True,True),
+           (test21,False,True,True,True,True),
+           (test3,True,False,True,True,True),
+           (test4,True,True,False,True,True),
+           (test5,True,True,True,False,True), 
+           (test6,True,True,True,True,False),
+           (test7,False,False,False,False,False)
+           ]
 
 for t,a1,a2,a3,a4,a5 in cromtests:
 	assert(t.axiom1()==a1)
@@ -58,38 +69,47 @@ print "Testing... CROI"
 
 test8=CROI([1],[2,3],[4],{1:1,2:2,3:3,4:4},[(1,4,2),(1,4,3)],{('a',4):[(2,3)]} )
 test8b=CROI([],[],[],{},[],{} )
-test9=CROI([1],[2,3],[4],{1:1,2:5,3:3,4:4},[(1,4,2),(1,4,3)],{('a',4):[(2,3)]} )
-test10=CROI([1],[2,3],[4],{1:1,2:2,3:2,4:4},[(1,4,2),(1,4,3)],{('a',4):[(2,None),(3,None)]} )
-test11=CROI([1],[2,3],[4,5],{1:1,2:2,3:3,4:4,5:4},[(1,4,2),(1,5,2),(1,4,3)],{('a',4):[(2,3)]} )
-test11b=CROI([1,5],[2,3],[4],{1:1,2:2,3:3,4:4,5:1},[(1,4,2),(5,4,2),(1,4,3)],{('a',4):[(2,3)]} )
-test12=CROI([1],[2,3],[4],{1:1,2:2,3:3,4:4},[(1,4,2),(1,4,3)],{('a',4):[(2,3), (None,None)]} )
-test13=CROI([1,6],[2,3,5],[4],{1:1,2:2,3:3,4:4,5:3,6:1},[(1,4,2),(1,4,3),(6,4,5)],{('a',4):[(2,3)]} )
-test13b=CROI([1,6],[2,3,5],[4],{1:1,2:2,3:3,5:2,6:1,4:4},[(1,4,2),(1,4,3),(6,4,5)],{('a',4):[(2,3)]} )
-test14=CROI([1],[2,3],[4],{1:1,2:2,3:3,4:4},[(1,4,2),(1,4,3)],{('a',4):[(2,3),(2,None)]} )
-test14b=CROI([1],[2,3],[4],{1:1,2:2,3:3,4:4},[(1,4,2),(1,4,3)],{('a',4):[(2,3),(None,3)]} )
-test15=CROI([1],[2,3,5,6],[4],{1:1,2:5,3:3,4:4,5:3,6:2},[(1,4,2),(1,4,5),(1,4,3)],{('a',4):[(2,3),(None,None),(2,None)]} )
+test9=CROI([1],[2,3],[4],{1:1,2:5,3:3,4:4},[(1,4,2),(1,4,3)],{('a',4):[]} )
+test10=CROI([1],[2,3],[4],{1:1,2:2,3:2,4:4},[(1,4,2),(1,4,3)],{('a',4):[]} )
+test11=CROI([1],[2,3],[4,5],{1:1,2:2,3:3,4:4,5:4},[(1,4,2),(1,5,2),(1,4,3)],{('a',4):[]} )
+test11b=CROI([1,5],[2,3],[4],{1:1,2:2,3:3,4:4,5:1},[(1,4,2),(5,4,2),(1,4,3)],{('a',4):[]} )
+test12=CROI([1],[2,3],[4,5],{1:1,2:2,3:3,4:4,5:4},[(1,5,2),(1,4,3)],{('a',4):[(2,3)]} )
+test12b=CROI([1],[2,3],[4,5],{1:1,2:2,3:3,4:4,5:4},[(1,4,2),(1,5,3)],{('a',4):[(2,3)]} )
+test12c=CROI([1,5],[2,3],[4],{1:1,2:2,3:2,4:4,5:1},[(1,4,2),(5,4,3)],{('a',4):[(2,3)]} )
+test12d=CROI([1,5],[2,3],[4],{1:1,2:3,3:3,4:4,5:1},[(1,4,2),(5,4,3)],{('a',4):[(2,3)]} )
+#
+#
+#test13=CROI([1,6],[2,3,5],[4],{1:1,2:2,3:3,4:4,5:3,6:1},[(1,4,2),(1,4,3),(6,4,5)],{('a',4):[(2,3)]} )
+#test13b=CROI([1,6],[2,3,5],[4],{1:1,2:2,3:3,5:2,6:1,4:4},[(1,4,2),(1,4,3),(6,4,5)],{('a',4):[(2,3)]} )
+#test14=CROI([1],[2,3],[4],{1:1,2:2,3:3,4:4},[(1,4,2),(1,4,3)],{('a',4):[(2,3),(2,None)]} )
+#test14b=CROI([1],[2,3],[4],{1:1,2:2,3:3,4:4},[(1,4,2),(1,4,3)],{('a',4):[(2,3),(None,3)]} )
+test15=CROI([1],[2,3,5,6],[4],{1:1,2:5,3:3,4:4,5:3,6:2},[(1,4,2),(1,4,5),(1,4,3)],{('a',4):[(2,3)]} )
 
-croitests=[ (test8, True,True,True,True,True,True),
-            (test8b, True,True,True,True,True,True),
-            (test9, False,True,True,True,True,True),
-            (test10,True,False,True,True,True,True),
-            (test11,True,True,False,True,True,True),
-            (test11b,True,True,False,True,True,True),
-            (test12,True,True,True,False,True,True),
-            (test13,True,True,True,True,False,True),
-            (test13b,True,True,True,True,False,True),
-            (test14,True,True,True,True,True,False),
-            (test14b,True,True,True,True,True,False),
-            (test15,False,False,False,False,False,False)]
+croitests=[ (test8, True,True,True,True),
+            (test8b, True,True,True,True),
+            (test9, False,True,True,True),
+            (test10,True,False,True,True),
+            (test11,True,True,False,True),
+            (test11b,True,True,False,True),
+            (test12,True,True,True,False),
+            (test12b,True,True,True,False),
+            (test12c,True,True,True,False),
+            (test12d,True,True,True,False),                        
+            #(test13,True,True,True,True,False,True),
+            #(test13b,True,True,True,True,False,True),
+            #(test14,True,True,True,True,True,False),
+            #(test14b,True,True,True,True,True,False),
+            (test15,False,False,False,False)
+            ]
 
-for t,a6,a7,a8,a9,a10,a11 in croitests:
+for t,a6,a7,a8,a9 in croitests:
 	assert(t.axiom6(test1)==a6)
 	assert(t.axiom7(test1)==a7)
 	assert(t.axiom8(test1)==a8)
 	assert(t.axiom9(test1)==a9)
-	assert(t.axiom10(test1)==a10)
-	assert(t.axiom11(test1)==a11)
-	assert(t.compliant(test1)==(a6 and a7 and a8 and a9 and a10 and a11))
+	assert(t.compliant(test1)==(a6 and a7 and a8 and a9 ))
+
+exit()
 
 # Test Cases for Role Groups
 
