@@ -53,4 +53,4 @@ Make sure to have a compatible Python version installed.
     
 ## Version
 
-1.0.0
+1.0.3
