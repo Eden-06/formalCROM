@@ -10,7 +10,7 @@ __copyright__ = "Copyright 2014"
 __license__ = "MIT"
 __version__ = "1.0.3"
 
-# Basic Defintions
+# Basic Definitions
 
 def mutual_disjoint(sets):
 	a = set()
@@ -36,7 +36,7 @@ def transitive_closure(a):
 		c = cn
 	return c
 
-# Defintion of Compartment Role Object Models
+# Definition of Compartment Role Object Models
 
 class CROM:
 	'''
