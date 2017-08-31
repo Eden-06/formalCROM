@@ -9,6 +9,7 @@ __author__ = "Thomas Kühn"
 __copyright__ = "Copyright 2014"
 __license__ = "MIT"
 __version__ = "1.0.0"
+__metaclass__ = type
 
 from crom import *
 
@@ -28,7 +29,7 @@ class CROM_I(CROM):
 		Moreover, \prec_{NT} and \prec_{CT} denote the inheritance relation
 		between natural types and role types.
 		'''
-		super(CROM,self).__init__(self,nt,rt,ct,rst,fills,rel)
+		super(CROM_I, self).__init__(nt,rt,ct,rst,fills,rel)
 		self.prec_nt=frozenset(prec_nt)		
 		self.prec_ct=frozenset(prec_ct)
 		assert self.prec_nt <= set(itertools.product(self.nt,self.nt))
@@ -62,7 +63,7 @@ class CROM_I(CROM):
 		'''
 		Returns true iff CROM is well-formed. 
 		'''
-		return self.welldefined() and self.axiom1() and self.axiom2() and \
+		return self.axiom1() and self.axiom2() and \
 		self.axiom3() and self.axiom4() and self.axiom5() and \
 		self.axiom6() and self.axiom7() and self.axiom8()
 		
@@ -76,24 +77,33 @@ class CROM_I(CROM):
 		'''
 		\\forall (ct_1,ct_2) \\in \\preceq_{CT} \\text{parts}(ct_2) \\subseteq \\text{parts}(ct_1)
 		'''
-		return all( crom.parts(ct_1) <= crom.parts(ct_2) for (ct_1,ct_2) in crom.prec_ct() )
+		return all( crom.parts(ct_2) <= crom.parts(ct_1) for (ct_1,ct_2) in crom.preceq_ct() )
 	
 	def axiom7(crom):
 		'''
-		\\forall  (ct_1,ct_2) \\in \\preceq_{CT} \\forall (rst,ct_2) \\in \\mathbf{domain}(\\text{rel}):
+		\\forall (ct_1,ct_2) \\in \\preceq_{CT} \\forall (rst,ct_2) \\in \\mathbf{domain}(\\text{rel}):
 		(rst,ct_1) \\in \\mathbf{domain}(\\text{rel}) \\wedge \\text{rel}(rst,ct_2)=\\text{rel}(rst,ct_1)
 		'''
-		return all(  (rst,ct_1) in rel.keys() and rel[(rst,ct_1)]==rel[(rst,ct_2)] \
-		for (ct_1,ct_2) in crom.prec_ct() for (rst,ct) in rel.keys() if ct==ct_2 ) 
+		return all(  (rst,ct_1) in crom.rel.keys() and crom.rel[(rst,ct_1)]==crom.rel[(rst,ct_2)] \
+		for (ct_1,ct_2) in crom.preceq_ct() for (rst,ct) in crom.rel.keys() if ct==ct_2 ) 
 
 	def axiom8(crom):
 		'''
-		\\forall (ct_1,ct_2) \\in \\preceq_{CT} \\forall rt \\in \\text{parts}(ct_2) \\forall (s,ct_1,rt) \\in \\text{fills} \\exists (t,ct_2,rt) \\in \\text{fills} : s \\preceq_{T} t
+		\\forall (ct_1,ct_2) \\in \\preceq_{CT} \\forall rt \\in \\text{parts}(ct_2) 
+		\\forall (s,ct_1,rt) \\in \\text{fills} \\exists (t,ct_2,rt) \\in \\text{fills} : s \\preceq_{T} t
 		'''
+		for ct_1,ct_2 in crom.preceq_ct():
+			for rt in crom.parts(ct_2):
+				for s,ct_s,rt_s in crom.fills:
+					if rt_s==rt and ct_s==ct_1:
+						if not (any( [(s,t) in crom.preceq_t() for t,ct,rt_t in crom.fills if ct==ct_2 and rt_t==rt] )):
+							print set( (s,t) for t,ct,rt_t in crom.fills if ct==ct_2 and rt_t==rt )
+							print "ct_1:{0}, ct_2:{1}, rt:{2}".format(ct_1,ct_2,rt)
+
 		return all( any( (s,t) in crom.preceq_t() \
-		for (t,ctx,rtx) in crom.fills if ctx==ct_2 and rtx==rt ) \
-		for (ct_1,ct_2) in crom.prec_ct() for rt in crom.parts(ct_2) \
-		for (s,ct,rt) in crom.fills if ctx==ct_1 ) 
+		for t,ct,rt_t   in crom.fills if ct==ct_2 and rt_t==rt ) \
+		for ct_1,ct_2 in crom.preceq_ct() for rt in crom.parts(ct_2) \
+		for s,ct_s,rt_s in crom.fills if rt_s==rt and ct_s==ct_1 ) 
 
 
 # Defintion of Compartment Role Object Instances
@@ -108,7 +118,7 @@ class CROI_I(CROI):
 		Creates a new CROI from the given sets of naturals, roles, compartments;
 		the type mapping; the plays-relation; and links-funktion.
 		'''
-		super(CROI,self).__init__(self,n,r,c,type1,plays,links)
+		super(CROI_I,self).__init__(self,n,r,c,type1,plays,links)
 
 
 	def compliant(self,crom):
@@ -161,7 +171,7 @@ class ConstraintModel_I(ConstraintModel):
 		'''
 		Creates a new ConstraintModel from the given role constraint and cardinality mappings as well as from the set of intra-relationship constraints.
 		'''
-		super(ConstraintModel,self).__init__(self,rolec,card,intra,inter,grolec)
+		super(ConstraintModel_I,self).__init__(self,rolec,card,intra,inter,grolec)
 		
 #	def compliant(self,crom):
 #		'''
@@ -170,7 +180,6 @@ class ConstraintModel_I(ConstraintModel):
 #		return crom.wellformed() and self.axiom10(crom) and \
 #		self.axiom11(crom) and self.axiom12(crom) and self.axiom13(crom)
 
-	# TODO: Continue				
 	def validity(self,crom,croi):
 		'''
 		Returns true iff the ConstraintModel is compliant to the given CROM and the given CROI is valid wrt. the ConstraintModel
@@ -186,7 +195,7 @@ class ConstraintModel_I(ConstraintModel):
 		'''
 		return all( \
 		crd[0] <= sum( [evaluate(a,croi,o,c) for o in croi.o_c(c)] ) <= crd[1] \
-		for c in croi.c for ct_1,ct in crom.preceq_ct if ct_1==croi.type1[c] and ct in cm.rolec for crd,a in cm.rolec[ct] )
+		for c in croi.c for ct_1,ct in crom.preceq_ct() if ct_1==croi.type1[c] and ct in cm.rolec for crd,a in cm.rolec[ct] )
 		
 	def axiom15(cm,crom,croi):
 		'''
@@ -195,7 +204,7 @@ class ConstraintModel_I(ConstraintModel):
 		\\text{type}(r) \\in \\text{atoms}(a) \\Rightarrow a^{\\I^c_o} = 1
 		'''
 		return all( evaluate(a,croi,o,c)==1 \
-		for o,c,r in croi.plays for ct_1,ct in crom.preceq_ct if ct_1==croi.type1[c] and ct in cm.rolec \
+		for o,c,r in croi.plays for ct_1,ct in crom.preceq_ct() if ct_1==croi.type1[c] and ct in cm.rolec \
 		for crd,a in cm.rolec[croi.type1[c]] if croi.type1[r] in atoms(a) )
 		
 	def axiom16(cm,crom,croi):
@@ -211,7 +220,7 @@ class ConstraintModel_I(ConstraintModel):
 		for r_2 in croi.r_c_rt(c,crom.rel[(rst,ct)][1]) ) and \
 		all( cm.card[(rst,ct)][1][0] <= len( croi.succ(rst,c,r_1) ) <= cm.card[(rst,ct)][1][1] \
 		for r_1 in croi.r_c_rt(c,crom.rel[(rst,ct)][0]) ) \
-		for c in croi.c for ct_1,ct_2 in crom.preceq_ct if ct_1==croi.type1[c] \
+		for c in croi.c for ct_1,ct_2 in crom.preceq_ct() if ct_1==croi.type1[c] \
 		for (rst,ct) in cm.card.keys() if ct==ct_2 )
 
 	def axiom17(cm,crom,croi):
@@ -222,7 +231,7 @@ class ConstraintModel_I(ConstraintModel):
 		return all( f(set( croi.o_c_rt(c,crom.rel[ (rst,croi.type1[c]) ][0]) ), \
 		set( croi.o_c_rt(c,crom.rel[ (rst,croi.type1[c]) ][1]) ), \
 		croi.overline_links(rst,c) )==1 \
-		for c in croi.c for ct_1,ct_2 in crom.preceq_ct if ct_1==croi.type1[c] \
+		for c in croi.c for ct_1,ct_2 in crom.preceq_ct() if ct_1==croi.type1[c] \
 		for (rst,ct,f) in cm.intra if ct==ct_2 and (rst,c) in croi.links)
 		
 	def axiom18(cm,crom,croi):
@@ -232,7 +241,7 @@ class ConstraintModel_I(ConstraintModel):
 
 		'''
 		return all( len(croi.overline_links(rst1,c) & croi.overline_links(rst2,c))==0 \
-		for c in croi.c for ct_1,ct_2 in crom.preceq_ct if ct_1==croi.type1[c]  \
+		for c in croi.c for ct_1,ct_2 in crom.preceq_ct() if ct_1==croi.type1[c]  \
 		for rst1,ct,e,rst2 in cm.inter if ct==ct_2 and e==">-<" )
 		
 	def axiom19(cm,crom,croi):
@@ -241,7 +250,7 @@ class ConstraintModel_I(ConstraintModel):
 		\\overline{\\text{links}(rst_1,c)} \\subseteq \\overline{\\text{links}(rst_2,c)}
 		'''
 		return all( croi.overline_links(rst1,c) <= croi.overline_links(rst2,c) \
-		for c in croi.c for ct_1,ct_2 in crom.preceq_ct if ct_1==croi.type1[c]  \
+		for c in croi.c for ct_1,ct_2 in crom.preceq_ct() if ct_1==croi.type1[c]  \
 		for rst1,ct,i,rst2 in cm.inter if ct==ct_2 and i=="-|>")
 		
 	def axiom20(cm,crom,croi):
