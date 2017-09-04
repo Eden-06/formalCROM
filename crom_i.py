@@ -92,14 +92,6 @@ class CROM_I(CROM):
 		\\forall (ct_1,ct_2) \\in \\preceq_{CT} \\forall rt \\in \\text{parts}(ct_2) 
 		\\forall (s,ct_1,rt) \\in \\text{fills} \\exists (t,ct_2,rt) \\in \\text{fills} : s \\preceq_{T} t
 		'''
-		for ct_1,ct_2 in crom.preceq_ct():
-			for rt in crom.parts(ct_2):
-				for s,ct_s,rt_s in crom.fills:
-					if rt_s==rt and ct_s==ct_1:
-						if not (any( [(s,t) in crom.preceq_t() for t,ct,rt_t in crom.fills if ct==ct_2 and rt_t==rt] )):
-							print set( (s,t) for t,ct,rt_t in crom.fills if ct==ct_2 and rt_t==rt )
-							print "ct_1:{0}, ct_2:{1}, rt:{2}".format(ct_1,ct_2,rt)
-
 		return all( any( (s,t) in crom.preceq_t() \
 		for t,ct,rt_t   in crom.fills if ct==ct_2 and rt_t==rt ) \
 		for ct_1,ct_2 in crom.preceq_ct() for rt in crom.parts(ct_2) \
@@ -118,20 +110,24 @@ class CROI_I(CROI):
 		Creates a new CROI from the given sets of naturals, roles, compartments;
 		the type mapping; the plays-relation; and links-funktion.
 		'''
-		super(CROI_I,self).__init__(self,n,r,c,type1,plays,links)
+		super(CROI_I,self).__init__(n,r,c,type1,plays,links)
 
 
 	def compliant(self,crom):
 		'''
 		Returns true iff the CROI is compliant to the given CROM.
 		'''
-		return crom.wellformed(crom) and self.axiom6(crom) and \
+		return crom.wellformed() and self.axiom6(crom) and \
 		self.axiom7(crom) and self.axiom8(crom) and self.axiom9(crom)
 	
 	def axiom6(croi,crom):
 		'''
 		\\forall (o,c,r) \\in \\text{plays} \\exists (t,\\text{type}(c),\\text{type}(r)) \\in \\text{fills}: \\text{type}(o) \\preceq_{T} t
 		'''
+
+		for (o,c,r) in croi.plays:
+			if not any( (croi.type1[o],t) in crom.preceq_t() for (t,ct,rt) in crom.fills if ct==croi.type1[c] and rt==croi.type1[r] ):
+				print "({0}:{1},{2}:{3},{4}:{5}) failed".format(o,croi.type1[o],c,croi.type1[c],r,croi.type1[r])
 		return all( any( (croi.type1[o],t) in crom.preceq_t() \
 		for (t,ct,rt) in crom.fills if ct==croi.type1[c] and rt==croi.type1[r] ) \
 		for (o,c,r) in croi.plays )
@@ -149,7 +145,7 @@ def evaluateQ_I(a,crom,croi,o):
 	\\end{cases}	
 	'''
 	if isinstance(a,QuantifiedGroup):
-		if (a.lower <= sum( evaluateQ_I(b,crom,croi,o) for b in a.rolegroups ) <= a.upper):
+		if (a.lower <= sum( evaluateQ_I(b,crom,croi,o) for b in a.qrgs ) <= a.upper):
 			return 1
 		else:
 			return 0
@@ -171,7 +167,7 @@ class ConstraintModel_I(ConstraintModel):
 		'''
 		Creates a new ConstraintModel from the given role constraint and cardinality mappings as well as from the set of intra-relationship constraints.
 		'''
-		super(ConstraintModel_I,self).__init__(self,rolec,card,intra,inter,grolec)
+		super(ConstraintModel_I,self).__init__(rolec,card,intra,inter,grolec)
 		
 #	def compliant(self,crom):
 #		'''
