@@ -74,8 +74,8 @@ class PersistenceAnnotation:
 		for (rst,ct) in self.rel:
 			result[(rst,ct)]=crom.rel[(rst,ct)]
 		#RelInCT
-		for ct in self.ct:
-			for (rst,ct) in crom.rel.iterkeys():
+		for (rst,ct) in crom.rel.iterkeys():
+			if ct in self.ct:
 				result[(rst,ct)]=crom.rel[(rst,ct)]
 		#inductive case
 		oldsize=-1

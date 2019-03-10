@@ -11,6 +11,39 @@ __version__ = "1.0.3"
 from crom import *
 from crompersistency import *
 
+def testtheorems(pannotation,fmodel,fcm):
+	print " Test Persistence Annotations:"
+	print "  "+str(pannotation)
+	ext=compute_ext(fmodel,fcm)	
+	pfills=pannotation.compute_fills(fmodel,fcm,ext)
+	assert pfills <= fmodel.fills
+	prel=pannotation.compute_rel(fmodel,fcm,pfills)
+	assert set( prel.iterkeys() ) <= set( fmodel.rel.iterkeys() )
+	poccur=pannotation.compute_occur(fcm,pfills,prel)
+	assert set( poccur.iterkeys() ) <= set( fcm.rolec.iterkeys() )
+	pcard=pannotation.compute_card(fcm,pfills,prel)
+	assert set( pcard.iterkeys() ) <= set( fcm.card.iterkeys() )	
+	#Theorem 1
+	pmodel,pcm = transformation(fmodel,fcm,pannotation)
+	print "  Test persisted CROM well-formedness"
+	assert pmodel.wellformed()
+	print "  Test persisted Constraint Model compliance to persisted CROM"
+	assert pcm.compliant(pmodel)
+	#Theorem 2
+	pinstance=restriction(pmodel,finstance)
+	print "  Test restricted CROI compliance to persisted CROM"
+	assert pinstance.compliant(pmodel)
+	print "  Test restricted CROI validity to persisted Constraint Model"
+	assert pcm.validity(pmodel,pinstance)
+	#Theorem 3
+	qinstance=restriction(fmodel,pinstance)
+	print "  Test lifted CROI compliance to CROM"
+	assert qinstance.compliant(fmodel)
+	print "  Test lifted CROI validity to Constraint Model"
+	assert fcm.validity(fmodel,qinstance)
+	print 
+	return None
+	
 NT=["SD","C","P","S"]
 RT=["FD","AP","A","FBS","Sensor","Actuator"]
 CT=["FA","R"]
@@ -58,6 +91,8 @@ assert fcm.validity(fmodel,finstance)
 
 print "Test Persistency Transformations"
 
+print set(itertools.product(fmodel.nt,fmodel.rt,fmodel.ct,set(fmodel.rel.iterkeys())))
+
 pannotations=[ PersistenceAnnotation(fmodel,[],[],["FA"],[]), \
 PersistenceAnnotation(fmodel,[],[],["R"],[]), \
 PersistenceAnnotation(fmodel,["P"],[],[],[]), \
@@ -65,35 +100,10 @@ PersistenceAnnotation(fmodel,[],[],[],[("feedback","FA")]), \
 PersistenceAnnotation(fmodel,[],["AP"],[],[]) ]
 
 for pannotation in pannotations:
-	print " Test Persistence Annotations:"
-	print "  "+str(pannotation)
-	ext=compute_ext(fmodel,fcm)	
-	pfills=pannotation.compute_fills(fmodel,fcm,ext)
-	assert pfills <= fmodel.fills
-	prel=pannotation.compute_rel(fmodel,fcm,pfills)
-	assert set( prel.iterkeys() ) <= set( fmodel.rel.iterkeys() )
-	poccur=pannotation.compute_occur(fcm,pfills,prel)
-	assert set( poccur.iterkeys() ) <= set( fcm.rolec.iterkeys() )
-	pcard=pannotation.compute_card(fcm,pfills,prel)
-	assert set( pcard.iterkeys() ) <= set( fcm.card.iterkeys() )	
-	#Theorem 1
-	pmodel,pcm = transformation(fmodel,fcm,pannotation)
-	print "  Test persisted CROM well-formedness"
-	assert pmodel.wellformed()
-	print "  Test persisted Constraint Model compliance to persisted CROM"
-	assert pcm.compliant(pmodel)
-	#Theorem 2
-	pinstance=restriction(pmodel,finstance)
-	print "  Test restricted CROI compliance to persisted CROM"
-	assert pinstance.compliant(pmodel)
-	print "  Test restricted CROI validity to persisted Constraint Model"
-	assert pcm.validity(pmodel,pinstance)
-	#Theorem 3
-	qinstance=restriction(fmodel,pinstance)
-	print "  Test lifted CROI compliance to CROM"
-	assert qinstance.compliant(fmodel)
-	print "  Test lifted CROI validity to Constraint Model"
-	assert fcm.validity(fmodel,qinstance)
-	print 
+	testtheorems(pannotation,fmodel,fcm)
+	
+for nt,rt,ct,rel in set(itertools.product(fmodel.nt,fmodel.rt,fmodel.ct,set(fmodel.rel.iterkeys()))):
+	pannotation=PersistenceAnnotation(fmodel,[nt],[rt],[ct],[rel])
+	testtheorems(pannotation,fmodel,fcm)
 
 print "All Tests passed successfully"
