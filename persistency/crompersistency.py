@@ -8,6 +8,10 @@ __copyright__ = "Copyright 2019"
 __license__ = "MIT"
 __version__ = "0.0.1"
 
+import sys
+
+sys.path.append('../')
+
 from crom import *
 
 class PersistenceAnnotation:

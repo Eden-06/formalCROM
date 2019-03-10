@@ -8,7 +8,6 @@ __copyright__ = "Copyright 2014"
 __license__ = "MIT"
 __version__ = "1.0.3"
 
-from crom import *
 from crompersistency import *
 
 print "=== Example Fire Alarm Model ==="
