@@ -6,7 +6,7 @@
 __author__ = "Thomas Kühn"
 __copyright__ = "Copyright 2019"
 __license__ = "MIT"
-__version__ = "0.0.1"
+__version__ = "1.0.0"
 
 import sys
 

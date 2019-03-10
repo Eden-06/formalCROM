@@ -6,7 +6,7 @@
 __author__ = "Thomas Kühn"
 __copyright__ = "Copyright 2014"
 __license__ = "MIT"
-__version__ = "1.0.3"
+__version__ = "1.0.0"
 
 from crompersistency import *
 
