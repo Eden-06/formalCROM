@@ -140,108 +140,24 @@ def transformation(crom,constraintmodel,annotation):
 	return (pcrom,pcm)
 
 def restriction(pcrom,croi):
-	pass
+	#Rule 36
+	plays=set( [(o,c,r) for (o,c,r) in croi.plays \
+	if (croi.type1[o],croi.type1[c],croi.type1[r]) in pcrom.fills] )
+	#Rule 37
+	links=dict()
+	for (rst,c) in croi.links.iterkeys():
+		ct=croi.type1[c]
+		if (rst,ct) in pcrom.rel:  		
+			links[(rst,c)]=set( [(r1,r2) for (r1,r2) in croi.links[(rst,c)] \
+			if pcrom.rel[(rst,ct)][0]==croi.type1[r1] and pcrom.rel[(rst,ct)][1]==croi.type1[r2] ])
+	#construction of the sets
+	ns=set( [n for (n,c,r) in plays if croi.type1[n] in pcrom.nt] )
+	rs=set( [r for (n,c,r) in plays] )
+	cs=set( [n for (n,c,r) in plays if croi.type1[n] in pcrom.ct] ) | set( [c for (n,c,r) in plays] )
+	type1=dict(croi.type1)
+	#Restricted CROI
 	result=CROI(ns,rs,cs,type1,plays,links)
 	return result
 
 
-
-# Example Model for the Bank
-
-print "=== Example Fire Alarm Model ==="
-
-NT=["SD","C","P","S"]
-RT=["FD","AP","A","FBS","Sensor","Actuator"]
-CT=["FA","R"]
-RST=["detectors","announcers","feedback"]
-fills=[("SD","R","Sensor"),("C","R","Sensor"),("P","R","Actuator"),("S","R","Actuator"),("SD","FA","FD"),("SD","FA","FBS"),("C","FA","FD"),("P","FA","A"),("S","FA","A"),("R","FA","AP")]
-rel={("detectors","FA"): ("FD","AP"),("announcers","FA"): ("AP","A"),("feedback","FA"): ("AP","FBS")}
-
-fmodel=CROM(NT,RT,CT,RST,fills,rel)
-
-          
-print fmodel
-if fmodel.wellformed():
-	print " The model is a wellformed CROM"
-else:
-	print " The model is not wellformed"
-print
-
-print "=== Example Fire Alarm Constraint Model ==="
-
-rolec={"R": [((0,inf),"Sensor"),((0,inf),"Actuator")],"FA": [((1,inf),"FD"),((1,inf),"AP"),((1,inf),"A"),((0,inf),"FBS")]}
-card={("detectors","FA"): ((1,inf),(1,1)),("announcers","FA"): ((1,1),(1,inf)),("feedback","FA"): ((1,1),(0,inf))}
-intra=[]
-implication="-|>"
-exclusion=">-<"
-inter={}
-grolec=[]
-
-fcm=ConstraintModel(rolec,card,intra,inter,grolec)
-
-print fcm
-if fcm.compliant(fmodel):
-	print " The constraint model is compliant to the CROM"
-else:
-	print " The constraint model is not compliant to the CROM"
-
-print
-
-
-print "=== Persistency Transformation ==="
-
-pannotation=PersistenceAnnotation(fmodel,[],["AP"],[],{})
-print pannotation
-
-ext=compute_ext(fmodel,fcm)
-print ext
-
-pfills=pannotation.compute_fills(fmodel,fcm,ext)
-print "fills:"
-print fmodel.fills
-print "persisted fills:"
-print pfills
-
-prel=pannotation.compute_rel(fmodel,fcm,pfills)
-print "rel:"
-print fmodel.rel
-print "persited rel:"
-print prel
-
-
-poccur=pannotation.compute_occur(fcm,pfills,prel)
-print "occur:"
-print fcm.rolec
-print "persited occur:"
-print poccur
-
-pcard=pannotation.compute_card(fcm,pfills,prel)
-print "card:"
-print fcm.card
-print "persited card:"
-print pcard
-
-print "=== Persisted Model and Constraint Model==="
-
-pmodel,pcm = transformation(fmodel,fcm,pannotation)
-
-print pmodel
-if pmodel.wellformed():
-	print " The persisted model is a wellformed CROM"
-else:
-	print " The persisted model is not wellformed"
-
-print
-
-
-print pcm
-if pcm.compliant(pmodel):
-	print " The persisted constraint model is compliant to the persisted CROM"
-else:
-	print " The persisted constraint model is not compliant to the persisted CROM"
-
-print
-
-
-print
 
