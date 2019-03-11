@@ -21,6 +21,7 @@ The repository contains three files, whereas:
     the axioms with both positive and negative cases.
 * **cromexample.py** implements an example model with constraints, two of its instances,
     and evaluates their well-formedness, compliance, and validity, respectively
+* **persistency** contains the definitions, examples and tests for the *Persistence Transformation*.
 
 ## Reference Implementation
 
